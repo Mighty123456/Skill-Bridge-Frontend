@@ -37,6 +37,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   bool _isPasswordVisible = false;
 
   final _currentAddressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   double? _latitude;
   double? _longitude;
@@ -71,6 +73,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _currentAddressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
     _pincodeController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -226,6 +230,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       // Prepare address data
       final address = {
         'street': _currentAddressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
         'pincode': _pincodeController.text.trim(),
         'coordinates': {
           'latitude': _latitude,
@@ -404,6 +410,23 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                       maxLines: 2,
                       validator: (value) =>
                          value == null || value.isEmpty ? 'Enter address' : null,
+                    ),
+                    _buildTextField(
+                      controller: _cityController,
+                      label: 'City',
+                      hint: 'Enter your city',
+                      icon: Icons.location_city_outlined,
+                      validator: (value) =>
+                         value == null || value.isEmpty ? 'Enter city' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _stateController,
+                      label: 'State',
+                      hint: 'Enter your state',
+                      icon: Icons.map_outlined,
+                      validator: (value) =>
+                         value == null || value.isEmpty ? 'Enter state' : null,
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
