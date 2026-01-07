@@ -2,8 +2,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../shared/themes/app_theme.dart';
+import '../../data/auth_service.dart';
+import 'otp_verification_screen.dart';
+import '../../../../widgets/custom_feedback_popup.dart';
 
 
 class WorkerRegistrationScreen extends StatefulWidget {
@@ -21,8 +25,16 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
 
   final _fullNameController = TextEditingController();
   DateTime? _dateOfBirth;
-  final _contactNumberController = TextEditingController();
+  final _phoneController = TextEditingController();
+
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
+
+  final _authService = AuthService();
+  bool _isLoading = false;
+  bool _isLocationLoading = false;
+
 
   File? _governmentIdFile;
   File? _selfieFile;
@@ -60,8 +72,9 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
   @override
   void dispose() {
     _fullNameController.dispose();
-    _contactNumberController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
     _currentAddressController.dispose();
     _pincodeController.dispose();
     _experienceController.dispose();
@@ -70,12 +83,20 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLocationLoading = true;
+    });
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location services are disabled')),
+        setState(() => _isLocationLoading = false);
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Location Disabled',
+          message: 'Please enable location services to continue',
+          type: FeedbackType.error,
         );
         return;
       }
@@ -85,8 +106,12 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permissions are denied')),
+          setState(() => _isLocationLoading = false);
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Permission Denied',
+            message: 'Location permissions are required for registration',
+            type: FeedbackType.error,
           );
           return;
         }
@@ -94,8 +119,12 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are permanently denied')),
+        setState(() => _isLocationLoading = false);
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Need Permission',
+          message: 'Please enable location permissions in settings',
+          type: FeedbackType.info,
         );
         return;
       }
@@ -105,19 +134,24 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
+        _isLocationLoading = false;
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Location captured: ${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}'),
-          backgroundColor: AppTheme.colors.success,
-        ),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Location Captured',
+        message: 'Your current location has been successfully detected',
+        type: FeedbackType.success,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error getting location: $e')),
+      setState(() => _isLocationLoading = false);
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Location Error',
+        message: e.toString(),
+        type: FeedbackType.error,
       );
     }
   }
@@ -134,6 +168,29 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
           _governmentIdFile = File(image.path);
         }
       });
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null) {
+        setState(() {
+          _governmentIdFile = File(result.files.single.path!);
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Selection Error',
+        message: e.toString(),
+        type: FeedbackType.error,
+      );
     }
   }
 
@@ -162,38 +219,119 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     }
   }
 
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      if (_governmentIdFile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload Government ID')),
-        );
-        return;
-      }
-      if (_selfieFile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload Selfie/Live Photo')),
-        );
-        return;
-      }
-      if (_latitude == null || _longitude == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please capture your location')),
-        );
-        return;
-      }
-      if (_primarySkill == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select your primary skill')),
-        );
-        return;
-      }
+  Future<void> _submitForm() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (_governmentIdFile == null) {
+      CustomFeedbackPopup.show(
+        context,
+        title: 'ID Required',
+        message: 'Please upload a government ID for verification',
+        type: FeedbackType.error,
+      );
+      return;
+    }
+    if (_selfieFile == null) {
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Selfie Required',
+        message: 'Please take a selfie for identity verification',
+        type: FeedbackType.error,
+      );
+      return;
+    }
+    if (_latitude == null || _longitude == null) {
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Location Required',
+        message: 'Please capture your location to register',
+        type: FeedbackType.error,
+      );
+      return;
+    }
+    if (_primarySkill == null) {
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Skill Required',
+        message: 'Please select your primary skill to proceed',
+        type: FeedbackType.error,
+      );
+      return;
+    }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Registration submitted! Verification pending.'),
-          backgroundColor: AppTheme.colors.success,
-        ),
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final address = {
+        'street': _currentAddressController.text.trim(),
+        'pincode': _pincodeController.text.trim(),
+        'coordinates': {
+          'latitude': _latitude,
+          'longitude': _longitude,
+        },
+      };
+
+      final List<String> skills = _primarySkill != null ? [_primarySkill!] : [];
+      final experience = int.tryParse(_experienceController.text.trim());
+
+      final result = await _authService.register(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        role: 'worker', 
+        name: _fullNameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        dateOfBirth: _dateOfBirth!,
+        address: address,
+        skills: skills,
+        experience: experience,
+        governmentId: _governmentIdFile,
+        selfie: _selfieFile,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (result['success'] == true) {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Welcome Aboard!',
+          message: result['message'] ?? 'Registration successful!',
+          type: FeedbackType.success,
+          onConfirm: () {
+            // Navigate to OTP Verification
+            Navigator.of(context).pushNamed(
+              OTPVerificationScreen.routeName,
+              arguments: {
+                'email': _emailController.text.trim(),
+                'flowType': 'registration',
+              },
+            );
+          },
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Registration Failed',
+          message: result['message'] ?? 'Please check your details and try again.',
+          type: FeedbackType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
       );
     }
   }
@@ -254,7 +392,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
-                      controller: _contactNumberController,
+                      controller: _phoneController,
                       label: 'Contact Number',
                       hint: 'Enter your phone number',
                       icon: Icons.phone_outlined,
@@ -271,6 +409,23 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       keyboardType: TextInputType.emailAddress,
                       validator: (value) =>
                         value == null || !value.contains('@') ? 'Enter valid email' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _passwordController,
+                      label: 'Password',
+                      hint: 'Create a password',
+                      icon: Icons.lock_outline,
+                      obscureText: !_isPasswordVisible,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: AppTheme.colors.primary,
+                        ),
+                        onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                      ),
+                      validator: (value) =>
+                         value == null || value.length < 6 ? 'Password must be at least 6 characters' : null,
                     ),
                   ],
                 ),
@@ -340,23 +495,24 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       onChanged: (val) => setState(() => _selectedIdType = val),
                     ),
                      const SizedBox(height: 16),
-                    _buildFileUpload(
-                      label: 'Upload ID Proof',
-                      file: _governmentIdFile,
-                      onCameraTap: () => _pickImage(ImageSource.camera, false),
-                      onGalleryTap: () => _pickImage(ImageSource.gallery, false),
-                      onRemove: () => setState(() => _governmentIdFile = null),
-                      icon: Icons.assignment_ind_outlined,
-                    ),
+                      _buildFileUpload(
+                        label: 'Upload ID Proof',
+                        file: _governmentIdFile,
+                        onCameraTap: () => _pickImage(ImageSource.camera, false),
+                        onGalleryTap: () => _pickImage(ImageSource.gallery, false),
+                        onDocumentTap: _pickDocument,
+                        onRemove: () => setState(() => _governmentIdFile = null),
+                        icon: Icons.assignment_ind_outlined,
+                      ),
                     const SizedBox(height: 16),
-                    _buildFileUpload(
-                      label: 'Take a Selfie',
-                      file: _selfieFile,
-                      onCameraTap: () => _pickImage(ImageSource.camera, true),
-                      onGalleryTap: () => _pickImage(ImageSource.gallery, true),
-                      onRemove: () => setState(() => _selfieFile = null),
-                      icon: Icons.camera_front_outlined,
-                    ),
+                      _buildFileUpload(
+                        label: 'Take a Selfie',
+                        file: _selfieFile,
+                        onCameraTap: () => _pickImage(ImageSource.camera, true),
+                        onGalleryTap: () => _pickImage(ImageSource.gallery, true),
+                        onRemove: () => setState(() => _selfieFile = null),
+                        icon: Icons.camera_front_outlined,
+                      ),
                   ],
                 ),
                 
@@ -373,10 +529,19 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  child: const Text(
-                    'Submit Application',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text(
+                          'Submit Application',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1),
+                        ),
                 ),
                 const SizedBox(height: 32),
               ],
@@ -447,10 +612,13 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     TextInputType? keyboardType,
     int maxLines = 1,
     String? Function(String?)? validator,
+    bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
+      obscureText: obscureText,
       maxLines: maxLines,
       validator: validator,
       style: TextStyle(color: AppTheme.colors.onSurface),
@@ -459,6 +627,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
         hintText: hint,
         hintStyle: TextStyle(color: AppTheme.colors.onSurface.withValues(alpha: 0.4)),
         prefixIcon: Icon(icon, color: AppTheme.colors.primary),
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: AppTheme.colors.jobCardSecondary.withValues(alpha: 0.3),
         border: OutlineInputBorder(
@@ -549,6 +718,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     required File? file,
     required VoidCallback onCameraTap,
     required VoidCallback onGalleryTap,
+    VoidCallback? onDocumentTap,
     required VoidCallback onRemove, // Added callback
     required IconData icon,
   }) {
@@ -641,6 +811,21 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                   ),
                 ),
               ),
+              if (onDocumentTap != null) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onDocumentTap,
+                    icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                    label: const Text('PDF'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: AppTheme.colors.primary.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ],
@@ -687,7 +872,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                    const SizedBox(width: 8),
                    Expanded(
                      child: Text(
-                       'Lat: ${_latitude!.toStringAsFixed(4)}, Lng: ${_longitude!.toStringAsFixed(4)}',
+                       'Location Detected Successfully',
                        style: TextStyle(color: AppTheme.colors.success, fontWeight: FontWeight.w500),
                      ),
                    ),
@@ -696,15 +881,33 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
              ),
            SizedBox(
              width: double.infinity,
-             child: OutlinedButton.icon(
-                onPressed: _getCurrentLocation,
-                icon: const Icon(Icons.location_searching),
-                label: const Text('Detect Current Location'),
+             child: OutlinedButton(
+                onPressed: _isLocationLoading ? null : _getCurrentLocation,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   side: BorderSide(color: AppTheme.colors.primary.withValues(alpha: 0.5)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
+                child: _isLocationLoading
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.colors.primary),
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.location_searching, color: AppTheme.colors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            _latitude != null ? 'Update Location' : 'Detect Current Location',
+                            style: TextStyle(color: AppTheme.colors.primary),
+                          ),
+                        ],
+                      ),
               ),
            ),
         ],

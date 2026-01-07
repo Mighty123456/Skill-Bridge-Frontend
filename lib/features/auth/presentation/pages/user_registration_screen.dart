@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../data/auth_service.dart';
+import 'otp_verification_screen.dart';
+import '../../../../widgets/custom_feedback_popup.dart';
 
 
 class UserRegistrationScreen extends StatefulWidget {
@@ -24,6 +26,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final _scrollController = ScrollController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isLocationLoading = false;
+
 
   final _fullNameController = TextEditingController();
   DateTime? _dateOfBirth;
@@ -78,12 +82,20 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       : AppTheme.colors.secondary;
 
   Future<void> _getCurrentLocation() async {
+    setState(() {
+      _isLocationLoading = true;
+    });
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location services are disabled')),
+        setState(() => _isLocationLoading = false);
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Location Disabled',
+          message: 'Please enable location services to continue',
+          type: FeedbackType.error,
         );
         return;
       }
@@ -93,8 +105,12 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permissions are denied')),
+          setState(() => _isLocationLoading = false);
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Permission Denied',
+            message: 'Location permissions are required for registration',
+            type: FeedbackType.error,
           );
           return;
         }
@@ -102,8 +118,12 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are permanently denied')),
+        setState(() => _isLocationLoading = false);
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Need Permission',
+          message: 'Please enable location permissions in settings',
+          type: FeedbackType.info,
         );
         return;
       }
@@ -113,19 +133,24 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
+        _isLocationLoading = false;
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Location captured: ${_latitude!.toStringAsFixed(6)}, ${_longitude!.toStringAsFixed(6)}'),
-          backgroundColor: AppTheme.colors.success,
-        ),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Location Captured',
+        message: 'Your current location has been successfully detected',
+        type: FeedbackType.success,
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error getting location: $e')),
+      setState(() => _isLocationLoading = false);
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Location Error',
+        message: e.toString(),
+        type: FeedbackType.error,
       );
     }
   }
@@ -162,26 +187,33 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 
     if (_latitude == null || _longitude == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please capture your location')),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Location Required',
+        message: 'Please capture your location to register',
+        type: FeedbackType.error,
       );
       return;
     }
 
     if (_primaryService == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please select ${widget.isContractor ? "service provided" : "service needed"}'),
-        ),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Selection Required',
+        message: 'Please select ${widget.isContractor ? "service provided" : "service needed"}',
+        type: FeedbackType.error,
       );
       return;
     }
 
     if (_dateOfBirth == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select your date of birth')),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Dob Required',
+        message: 'Please select your date of birth',
+        type: FeedbackType.error,
       );
       return;
     }
@@ -205,7 +237,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       final role = widget.isContractor ? 'contractor' : 'user';
 
       // Prepare services list
-      final services = _primaryService != null ? [_primaryService!] : [];
+      final List<String> services = _primaryService != null ? [_primaryService!] : [];
 
       // Call registration API
       final result = await _authService.register(
@@ -226,21 +258,28 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       });
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Registration successful!'),
-            backgroundColor: AppTheme.colors.success,
-          ),
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Account Created!',
+          message: result['message'] ?? 'Registration successful!',
+          type: FeedbackType.success,
+          onConfirm: () {
+            // Navigate to OTP Verification
+            Navigator.of(context).pushNamed(
+              OTPVerificationScreen.routeName,
+              arguments: {
+                'email': _emailController.text.trim(),
+                'flowType': 'registration',
+              },
+            );
+          },
         );
-        
-        // Navigate to login or home screen
-        Navigator.of(context).popUntil((route) => route.isFirst);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Registration failed. Please try again.'),
-            backgroundColor: AppTheme.colors.error,
-          ),
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Registration Failed',
+          message: result['message'] ?? 'Please check your details and try again.',
+          type: FeedbackType.error,
         );
       }
     } catch (e) {
@@ -249,11 +288,11 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         _isLoading = false;
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: AppTheme.colors.error,
-        ),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
       );
     }
   }
@@ -633,7 +672,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                    const SizedBox(width: 8),
                    Expanded(
                      child: Text(
-                       'Lat: ${_latitude!.toStringAsFixed(4)}, Lng: ${_longitude!.toStringAsFixed(4)}',
+                       'Location Detected Successfully',
                        style: TextStyle(color: AppTheme.colors.success, fontWeight: FontWeight.w500),
                      ),
                    ),
@@ -642,16 +681,33 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
              ),
            SizedBox(
              width: double.infinity,
-             child: OutlinedButton.icon(
-                onPressed: _getCurrentLocation,
-                icon: const Icon(Icons.location_searching),
-                label: const Text('Detect Current Location'),
+             child: OutlinedButton(
+                onPressed: _isLocationLoading ? null : _getCurrentLocation,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   side: BorderSide(color: _activeColor.withValues(alpha: 0.5)),
-                  foregroundColor: _activeColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
+                child: _isLocationLoading
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(_activeColor),
+                        ),
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.location_searching, color: _activeColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            _latitude != null ? 'Update Location' : 'Detect Current Location',
+                            style: TextStyle(color: _activeColor),
+                          ),
+                        ],
+                      ),
               ),
            ),
         ],

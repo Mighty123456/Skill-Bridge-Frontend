@@ -6,6 +6,7 @@ import '../features/auth/presentation/pages/splash_screen.dart';
 import '../features/auth/presentation/pages/user_registration_screen.dart';
 import '../features/auth/presentation/pages/worker_registration_screen.dart';
 import '../features/auth/presentation/pages/onboarding_screen.dart';
+import '../features/auth/presentation/pages/otp_verification_screen.dart';
 
 class AppRouter {
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
@@ -26,6 +27,14 @@ class AppRouter {
         final isContractor = settings.arguments == true;
         return MaterialPageRoute(
           builder: (_) => UserRegistrationScreen(isContractor: isContractor),
+        );
+      case OTPVerificationScreen.routeName:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => OTPVerificationScreen(
+            email: args?['email'] ?? '',
+            flowType: args?['flowType'] ?? 'registration',
+          ),
         );
       default:
         return null;

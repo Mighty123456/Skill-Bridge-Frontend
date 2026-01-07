@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
-import '../../../../shared/widgets/custom_app_bar.dart';
 import 'login_screen.dart';
+import '../../../../shared/widgets/custom_app_bar.dart';
+import '../../data/auth_service.dart';
+import '../../../../widgets/custom_feedback_popup.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -23,6 +25,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isConfirmPasswordVisible = false;
   bool _isLoading = false;
   int _step = 1; // 1: Email, 2: OTP, 3: New Password
+  final _authService = AuthService();
 
   @override
   void dispose() {
@@ -36,8 +39,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _sendOtp() async {
     if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address')),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Invalid Email',
+        message: 'Please enter a valid email address',
+        type: FeedbackType.error,
       );
       return;
     }
@@ -46,28 +52,54 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _isLoading = true;
     });
 
-    // TODO: Call backend API to send OTP
-    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+    try {
+      final result = await _authService.forgotPassword(_emailController.text.trim());
+      
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      _step = 2;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('OTP sent to your email'),
-        backgroundColor: AppTheme.colors.success,
-      ),
-    );
+      if (result['success'] == true) {
+        setState(() {
+          _step = 2;
+        });
+        CustomFeedbackPopup.show(
+          context,
+          title: 'OTP Sent',
+          message: result['message'] ?? 'Please check your email for the verification code',
+          type: FeedbackType.otp,
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Failed to Send',
+          message: result['message'] ?? 'Unable to send OTP. Please try again.',
+          type: FeedbackType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
+      );
+    }
   }
 
   Future<void> _verifyOtp() async {
     if (_otpController.text.isEmpty || _otpController.text.length != 6) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid 6-digit OTP')),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Invalid OTP',
+        message: 'Please enter a valid 6-digit verification code',
+        type: FeedbackType.error,
       );
       return;
     }
@@ -76,21 +108,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _isLoading = true;
     });
 
-    // TODO: Call backend API to verify OTP
-    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+    try {
+      final result = await _authService.verifyResetOTP(
+        _emailController.text.trim(),
+        _otpController.text.trim(),
+      );
+      
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      _step = 3;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('OTP verified successfully'),
-        backgroundColor: AppTheme.colors.success,
-      ),
-    );
+      if (result['success'] == true) {
+        setState(() {
+          _step = 3;
+        });
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Verified!',
+          message: result['message'] ?? 'OTP verified successfully',
+          type: FeedbackType.success,
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Verification Failed',
+          message: result['message'] ?? 'Invalid OTP code. Please try again.',
+          type: FeedbackType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
+      );
+    }
   }
 
   Future<void> _resetPassword() async {
@@ -100,8 +158,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (_newPasswordController.text != _confirmPasswordController.text) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match')),
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Mismatch',
+        message: 'Passwords do not match. Please check again.',
+        type: FeedbackType.error,
       );
       return;
     }
@@ -110,27 +171,52 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _isLoading = true;
     });
 
-    // TODO: Call backend API to reset password
-    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+    try {
+      final result = await _authService.resetPassword(
+        _emailController.text.trim(),
+        _otpController.text.trim(),
+        _newPasswordController.text.trim(),
+      );
+      
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Password reset successfully'),
-        backgroundColor: AppTheme.colors.success,
-      ),
-    );
-
-    // Navigate back to login
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const LoginScreen(),
-      ),
-    );
+      if (result['success'] == true) {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Success!',
+          message: result['message'] ?? 'Your password has been reset successfully',
+          type: FeedbackType.success,
+          onConfirm: () {
+            // Navigate back to login
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              LoginScreen.routeName,
+              (route) => false,
+            );
+          },
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Reset Failed',
+          message: result['message'] ?? 'Unable to reset password. Please try again.',
+          type: FeedbackType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
+      );
+    }
   }
 
   void _goBack() {

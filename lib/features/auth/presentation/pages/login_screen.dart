@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import '../../../../widgets/custom_feedback_popup.dart';
 
 import 'forgot_password_screen.dart';
 import 'role_selection_screen.dart';
+import '../../data/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
+  final _authService = AuthService();
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -69,28 +72,50 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _sendOtp() async {
     if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email address')),
+      if (!mounted) return;
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Invalid Email',
+        message: 'Please enter a valid email address',
+        type: FeedbackType.error,
       );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final result = await _authService.sendLoginOTP(_emailController.text.trim());
+      
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-      _otpSent = true;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('OTP sent to your email'),
-        backgroundColor: AppTheme.colors.success,
-      ),
-    );
+      if (result['success'] == true) {
+        setState(() => _otpSent = true);
+        CustomFeedbackPopup.show(
+          context,
+          title: 'OTP Sent',
+          message: result['message'] ?? 'Check your email for the verification code',
+          type: FeedbackType.otp,
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Failed to Send',
+          message: result['message'] ?? 'Unable to send OTP. Please try again.',
+          type: FeedbackType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
+      );
+    }
   }
 
   Future<void> _login() async {
@@ -98,12 +123,51 @@ class _LoginScreenState extends State<LoginScreen>
 
     setState(() => _isLoading = true);
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      Map<String, dynamic> result;
+      if (_isOtpLogin) {
+        result = await _authService.loginWithOTP(
+          _emailController.text.trim(),
+          _otpController.text.trim(),
+        );
+      } else {
+        result = await _authService.login(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
+        );
+      }
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-    Navigator.of(context).pushReplacementNamed(RoleSelectionScreen.routeName);
+      if (result['success'] == true) {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Welcome!',
+          message: result['message'] ?? 'Login successful!',
+          type: FeedbackType.success,
+          onConfirm: () {
+            Navigator.of(context).pushReplacementNamed(RoleSelectionScreen.routeName);
+          },
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Login Failed',
+          message: result['message'] ?? 'Invalid credentials. Please try again.',
+          type: FeedbackType.error,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Error',
+        message: e.toString(),
+        type: FeedbackType.error,
+      );
+    }
   }
 
   void _toggleLoginMode() {

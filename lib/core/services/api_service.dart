@@ -1,28 +1,31 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
+
   factory ApiService() => _instance;
+
   ApiService._internal();
 
   // Get headers for JSON requests
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
 
   // Get headers for multipart/form-data (file uploads)
   Map<String, String> get _multipartHeaders => {
-    'Accept': 'application/json',
-  };
+        'Accept': 'application/json',
+      };
 
   // Handle API response
   Map<String, dynamic> _handleResponse(http.Response response) {
     try {
       final data = json.decode(response.body);
-      
+
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return {
           'success': true,
@@ -51,9 +54,10 @@ class ApiService {
       final response = await http.get(url, headers: _headers).timeout(ApiConfig.timeout);
       return _handleResponse(response);
     } catch (e) {
+      final url = '${baseUrl ?? ApiConfig.authBaseUrl}$endpoint';
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Network error on $url: ${e.toString()}',
       };
     }
   }
@@ -66,17 +70,20 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('${baseUrl ?? ApiConfig.authBaseUrl}$endpoint');
-      final response = await http.post(
-        url,
-        headers: _headers,
-        body: json.encode(data),
-      ).timeout(ApiConfig.timeout);
-      
+      final response = await http
+          .post(
+            url,
+            headers: _headers,
+            body: json.encode(data),
+          )
+          .timeout(ApiConfig.timeout);
+
       return _handleResponse(response);
     } catch (e) {
+      final url = '${baseUrl ?? ApiConfig.authBaseUrl}$endpoint';
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Network error on $url: ${e.toString()}',
       };
     }
   }
@@ -93,22 +100,23 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('${baseUrl ?? ApiConfig.uploadBaseUrl}$endpoint');
-      
+
       var request = http.MultipartRequest('POST', url);
       request.headers.addAll(_multipartHeaders);
-      
+
       // Add authorization token if provided
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      
+
       // Add fields
       fields.forEach((key, value) {
-        if (key != 'Authorization') { // Don't add Authorization as a field
+        if (key != 'Authorization') {
+          // Don't add Authorization as a field
           request.fields[key] = value;
         }
       });
-      
+
       // Add file
       request.files.add(
         http.MultipartFile.fromBytes(
@@ -117,17 +125,67 @@ class ApiService {
           filename: fileName,
         ),
       );
-      
+
       final streamedResponse = await request.send().timeout(ApiConfig.timeout);
       final response = await http.Response.fromStream(streamedResponse);
-      
+
       return _handleResponse(response);
     } catch (e) {
+      final url = '${baseUrl ?? ApiConfig.uploadBaseUrl}$endpoint';
       return {
         'success': false,
-        'message': 'Network error: ${e.toString()}',
+        'message': 'Network error on $url: ${e.toString()}',
+      };
+    }
+  }
+
+  // POST request with multiple files upload (multipart)
+  Future<Map<String, dynamic>> postWithFiles(
+    String endpoint,
+    Map<String, String> fields,
+    Map<String, File> files, {
+    String? baseUrl,
+    String? token,
+  }) async {
+    try {
+      final url = Uri.parse('${baseUrl ?? ApiConfig.authBaseUrl}$endpoint');
+
+      var request = http.MultipartRequest('POST', url);
+      request.headers.addAll(_multipartHeaders);
+
+      // Add authorization token if provided
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+
+      // Add fields
+      fields.forEach((key, value) {
+        request.fields[key] = value;
+      });
+
+      // Add files
+      for (var entry in files.entries) {
+        final fieldName = entry.key;
+        final file = entry.value;
+        
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            fieldName,
+            file.path,
+          ),
+        );
+      }
+
+      final streamedResponse = await request.send().timeout(ApiConfig.timeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } catch (e) {
+      final url = '${baseUrl ?? ApiConfig.authBaseUrl}$endpoint';
+      return {
+        'success': false,
+        'message': 'Network error on $url: ${e.toString()}',
       };
     }
   }
 }
-
