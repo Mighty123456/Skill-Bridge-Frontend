@@ -16,6 +16,9 @@ class ApiConfig {
   // Auth endpoints
   static String get authBaseUrl => useLocalHost ? localBaseUrl : vercelBaseUrl;
   
+  // Main API Base URL
+  static String get baseUrl => authBaseUrl;
+  
   // Upload endpoints
   static String get uploadBaseUrl => useLocalHost ? localBaseUrl : renderBaseUrl;
   

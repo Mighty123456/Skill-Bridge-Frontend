@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../../../widgets/custom_feedback_popup.dart';
 
@@ -124,33 +126,74 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _isLoading = true);
 
     try {
+      debugPrint('═══════════════════════════════════════');
+      debugPrint('🔐 LOGIN: Starting login process');
+      debugPrint('═══════════════════════════════════════');
+      
       Map<String, dynamic> result;
       if (_isOtpLogin) {
+        debugPrint('📧 Login method: OTP');
         result = await _authService.loginWithOTP(
           _emailController.text.trim(),
           _otpController.text.trim(),
         );
       } else {
+        debugPrint('🔑 Login method: Password');
         result = await _authService.login(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
       }
 
+      debugPrint('📦 Login API Response:');
+      debugPrint('   Success: ${result['success']}');
+      debugPrint('   Message: ${result['message']}');
+
       if (!mounted) return;
       setState(() => _isLoading = false);
 
       if (result['success'] == true) {
+        debugPrint('✅ Login successful!');
+        final String? token = result['data']?['token'];
+        debugPrint('🎫 Token from response: ${token != null ? "EXISTS (length: ${token.length})" : "NULL"}');
+        
+        if (token != null) {
+          debugPrint('💾 Saving token to storage...');
+          await AuthService.setToken(token);
+          debugPrint('✅ Token saved successfully');
+          
+          // Verify token was saved
+          final savedToken = AuthService.token;
+          debugPrint('🔍 Verification - Token in memory: ${savedToken != null ? "EXISTS" : "NULL"}');
+        } else {
+          debugPrint('⚠️ No token in login response!');
+        }
+        
+        if (!mounted) return;
+        
+        final String role = result['data']?['user']?['role'] ?? 'user';
+        debugPrint('👤 User role: $role');
+        
         CustomFeedbackPopup.show(
           context,
           title: 'Welcome!',
           message: result['message'] ?? 'Login successful!',
           type: FeedbackType.success,
           onConfirm: () {
-            Navigator.of(context).pushReplacementNamed(RoleSelectionScreen.routeName);
+            debugPrint('🚀 Navigating to main screen for role: $role');
+            if (role == 'worker') {
+              Navigator.of(context).pushNamedAndRemoveUntil('/worker-main', (route) => false);
+            } else {
+              Navigator.of(context).pushNamedAndRemoveUntil('/tenant-main', (route) => false);
+            }
           },
         );
+        
+        debugPrint('═══════════════════════════════════════');
+        debugPrint('🏁 LOGIN: Login process complete');
+        debugPrint('═══════════════════════════════════════\n');
       } else {
+        debugPrint('❌ Login failed: ${result['message']}');
         CustomFeedbackPopup.show(
           context,
           title: 'Login Failed',
@@ -159,6 +202,7 @@ class _LoginScreenState extends State<LoginScreen>
         );
       }
     } catch (e) {
+      debugPrint('💥 LOGIN ERROR: $e');
       if (!mounted) return;
       setState(() => _isLoading = false);
       CustomFeedbackPopup.show(
@@ -179,325 +223,369 @@ class _LoginScreenState extends State<LoginScreen>
     });
   }
 
+  Future<void> _showExitDialog() async {
+    final bool? shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Exit App',
+          style: TextStyle(
+            color: AppTheme.colors.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text('Are you sure you want to exit SkillBridge?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.colors.onSurface.withValues(alpha: 0.6)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.colors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldExit == true) {
+      if (Platform.isAndroid) {
+        SystemNavigator.pop();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Determine screen height for responsive spacing
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: BackButton(color: AppTheme.colors.primary),
-      ),
-      body: Container(
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.colors.surface,
-              AppTheme.colors.jobCardSecondary.withValues(alpha: 0.5),
-            ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (Platform.isAndroid) {
+          _showExitDialog();
+        }
+      },
+      child: Scaffold(
+        body: Container(
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.colors.surface,
+                AppTheme.colors.jobCardSecondary.withValues(alpha: 0.5),
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  children: [
-                    SizedBox(height: screenHeight * 0.05),
-                    
-                    // Logo and Welcome Text
-                    Hero(
-                      tag: 'app_logo',
-                      child: Container(
-                        height: 100,
-                        width: 100,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Column(
+                    children: [
+                      SizedBox(height: screenHeight * 0.05),
+                      
+                      // Logo and Welcome Text
+                      Hero(
+                        tag: 'app_logo',
+                        child: Container(
+                          height: 100,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppTheme.colors.surface,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.colors.primary.withValues(alpha: 0.2),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Icon(
+                            Icons.person_outline,
+                            size: 50,
+                            color: AppTheme.colors.primary,
+                          )
+                          // Note: Replace Icon with Image.asset if logo exists
+                          // Image.asset('assets/logoSkillBridge.png', fit: BoxFit.contain),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Welcome Back!',
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: AppTheme.colors.primary,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Login to continue to SkillBridge',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: AppTheme.colors.onSurface.withValues(alpha: 0.7),
+                            ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 48),
+  
+                      // Login Card
+                      Container(
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
                           color: AppTheme.colors.surface,
+                          borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.colors.primary.withValues(alpha: 0.2),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
                           ],
+                          border: Border.all(
+                            color: AppTheme.colors.primary.withValues(alpha: 0.1),
+                          ),
                         ),
-                        padding: const EdgeInsets.all(16),
-                        child: Icon(
-                          Icons.person_outline,
-                          size: 50,
-                          color: AppTheme.colors.primary,
-                        )
-                        // Note: Replace Icon with Image.asset if logo exists
-                        // Image.asset('assets/logoSkillBridge.png', fit: BoxFit.contain),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Welcome Back!',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: AppTheme.colors.primary,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Login to continue to SkillBridge',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppTheme.colors.onSurface.withValues(alpha: 0.7),
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-
-                    // Login Card
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: AppTheme.colors.surface,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: AppTheme.colors.primary.withValues(alpha: 0.1),
-                        ),
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            /// EMAIL
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              style: TextStyle(color: AppTheme.colors.onSurface),
-                              decoration: _buildInputDecoration(
-                                label: 'Email',
-                                icon: Icons.email_outlined,
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 20),
-
-                            /// PASSWORD LOGIN
-                            if (!_isOtpLogin) ...[
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              /// EMAIL
                               TextFormField(
-                                controller: _passwordController,
-                                obscureText: !_isPasswordVisible,
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                style: TextStyle(color: AppTheme.colors.onSurface),
                                 decoration: _buildInputDecoration(
-                                  label: 'Password',
-                                  icon: Icons.lock_outline,
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _isPasswordVisible
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: AppTheme.colors.primary,
-                                    ),
-                                    onPressed: () => setState(() {
-                                      _isPasswordVisible = !_isPasswordVisible;
-                                    }),
-                                  ),
+                                  label: 'Email',
+                                  icon: Icons.email_outlined,
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
-                                    return 'Please enter your password';
+                                    return 'Please enter your email';
                                   }
-                                  if (value.length < 6) {
-                                    return 'Password must be at least 6 characters';
+                                  if (!value.contains('@')) {
+                                    return 'Please enter a valid email';
                                   }
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      ForgotPasswordScreen.routeName,
-                                    );
-                                  },
-                                  child: Text(
-                                    'Forgot Password?',
-                                    style: TextStyle(
-                                      color: AppTheme.colors.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-
-                            /// OTP LOGIN
-                            if (_isOtpLogin) ...[
-                              if (!_otpSent) ...[
-                                const SizedBox(height: 10),
-                                OutlinedButton.icon(
-                                  onPressed: _isLoading ? null : _sendOtp,
-                                  icon: const Icon(Icons.sms_outlined),
-                                  label: const Text('Send Verification Code'),
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    side: BorderSide(color: AppTheme.colors.primary),
-                                    foregroundColor: AppTheme.colors.primary,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                ),
-                              ] else ...[
+                              const SizedBox(height: 20),
+  
+                              /// PASSWORD LOGIN
+                              if (!_isOtpLogin) ...[
                                 TextFormField(
-                                  controller: _otpController,
-                                  keyboardType: TextInputType.number,
-                                  maxLength: 6,
+                                  controller: _passwordController,
+                                  obscureText: !_isPasswordVisible,
                                   decoration: _buildInputDecoration(
-                                    label: 'Enter OTP',
-                                    icon: Icons.pin_outlined,
+                                    label: 'Password',
+                                    icon: Icons.lock_outline,
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _isPasswordVisible
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: AppTheme.colors.primary,
+                                      ),
+                                      onPressed: () => setState(() {
+                                        _isPasswordVisible = !_isPasswordVisible;
+                                      }),
+                                    ),
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Please enter OTP';
+                                      return 'Please enter your password';
                                     }
-                                    if (value.length != 6) {
-                                      return 'OTP must be 6 digits';
+                                    if (value.length < 6) {
+                                      return 'Password must be at least 6 characters';
                                     }
                                     return null;
                                   },
                                 ),
+                                const SizedBox(height: 8),
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
-                                    onPressed: _isLoading ? null : _sendOtp,
-                                    child: const Text('Resend OTP'),
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        ForgotPasswordScreen.routeName,
+                                      );
+                                    },
+                                    child: Text(
+                                      'Forgot Password?',
+                                      style: TextStyle(
+                                        color: AppTheme.colors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
-                            ],
-
-                            const SizedBox(height: 32),
-
-                            /// LOGIN BUTTON
-                            ElevatedButton(
-                              onPressed: _isLoading ? null : _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.colors.primary,
-                                foregroundColor: AppTheme.colors.onPrimary,
-                                padding: const EdgeInsets.symmetric(vertical: 18),
-                                elevation: 4,
-                                shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor: AlwaysStoppedAnimation(Colors.white),
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Login',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1,
+  
+                              /// OTP LOGIN
+                              if (_isOtpLogin) ...[
+                                if (!_otpSent) ...[
+                                  const SizedBox(height: 10),
+                                  OutlinedButton.icon(
+                                    onPressed: _isLoading ? null : _sendOtp,
+                                    icon: const Icon(Icons.sms_outlined),
+                                    label: const Text('Send Verification Code'),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      side: BorderSide(color: AppTheme.colors.primary),
+                                      foregroundColor: AppTheme.colors.primary,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
+                                  ),
+                                ] else ...[
+                                  TextFormField(
+                                    controller: _otpController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 6,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Enter OTP',
+                                      icon: Icons.pin_outlined,
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter OTP';
+                                      }
+                                      if (value.length != 6) {
+                                        return 'OTP must be 6 digits';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: _isLoading ? null : _sendOtp,
+                                      child: const Text('Resend OTP'),
+                                    ),
+                                  ),
+                                ],
+                              ],
+  
+                              const SizedBox(height: 32),
+  
+                              /// LOGIN BUTTON
+                              ElevatedButton(
+                                onPressed: _isLoading ? null : _login,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.colors.primary,
+                                  foregroundColor: AppTheme.colors.onPrimary,
+                                  padding: const EdgeInsets.symmetric(vertical: 18),
+                                  elevation: 4,
+                                  shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor: AlwaysStoppedAnimation(Colors.white),
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Login',
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1,
+                                        ),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+  
+                      const SizedBox(height: 24),
+  
+                      /// TOGGLE LOGIN MODE
+                      TextButton(
+                        onPressed: _toggleLoginMode,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          backgroundColor: AppTheme.colors.surface,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isOtpLogin ? Icons.lock_outline : Icons.sms_outlined,
+                              size: 20,
+                              color: AppTheme.colors.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _isOtpLogin
+                                  ? 'Login with Password instead'
+                                  : 'Login with OTP instead',
+                              style: TextStyle(
+                                color: AppTheme.colors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    /// TOGGLE LOGIN MODE
-                    TextButton(
-                      onPressed: _toggleLoginMode,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        backgroundColor: AppTheme.colors.surface,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+  
+                      const SizedBox(height: 32),
+                      
+                      // Register Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            _isOtpLogin ? Icons.lock_outline : Icons.sms_outlined,
-                            size: 20,
-                            color: AppTheme.colors.primary,
+                           Text(
+                            "Don't have an account? ",
+                            style: TextStyle(color: AppTheme.colors.onSurface.withValues(alpha: 0.6)),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _isOtpLogin
-                                ? 'Login with Password instead'
-                                : 'Login with OTP instead',
-                            style: TextStyle(
-                              color: AppTheme.colors.primary,
-                              fontWeight: FontWeight.w600,
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.of(context)
+                                  .pushReplacementNamed(RoleSelectionScreen.routeName);
+                            },
+                            child: Text(
+                              'Register Now',
+                              style: TextStyle(
+                                color: AppTheme.colors.primary,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-
-                    const SizedBox(height: 32),
-                    
-                    // Register Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                         Text(
-                          "Don't have an account? ",
-                          style: TextStyle(color: AppTheme.colors.onSurface.withValues(alpha: 0.6)),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.of(context)
-                                .pushReplacementNamed(RoleSelectionScreen.routeName);
-                          },
-                          child: Text(
-                            'Register Now',
-                            style: TextStyle(
-                              color: AppTheme.colors.primary,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),

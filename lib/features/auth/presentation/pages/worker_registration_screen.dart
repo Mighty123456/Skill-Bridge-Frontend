@@ -356,8 +356,9 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        leading: BackButton(color: AppTheme.colors.primary),
+        automaticallyImplyLeading: false,
       ),
       body: Container(
         height: double.infinity,

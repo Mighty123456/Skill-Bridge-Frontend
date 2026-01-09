@@ -96,6 +96,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       });
 
       if (result['success'] == true) {
+        // Save token if provided
+        final String? token = result['data']?['token'];
+        if (token != null) await AuthService.setToken(token);
+        
+        if (!mounted) return;
+        
         CustomFeedbackPopup.show(
           context,
           title: 'Verified!',
@@ -108,10 +114,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 (route) => false,
               );
             } else {
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                '/', // Replace with Home route
-                (route) => false,
-              );
+              final String role = result['data']?['user']?['role'] ?? 'user';
+              if (role == 'worker') {
+                Navigator.of(context).pushNamedAndRemoveUntil('/worker-main', (route) => false);
+              } else {
+                Navigator.of(context).pushNamedAndRemoveUntil('/tenant-main', (route) => false);
+              }
             }
           },
         );
@@ -190,7 +198,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: BackButton(color: AppTheme.colors.primary),
+        automaticallyImplyLeading: false,
         titleTextStyle: TextStyle(
           color: AppTheme.colors.primary,
           fontWeight: FontWeight.bold,

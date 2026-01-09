@@ -219,31 +219,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _goBack() {
-    if (_step > 1) {
-      setState(() {
-        _step--;
-        if (_step == 1) {
-          _otpController.clear();
-        } else if (_step == 2) {
-          _newPasswordController.clear();
-          _confirmPasswordController.clear();
-        }
-      });
-    } else {
-      Navigator.of(context).pop();
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
         title: 'Forgot Password',
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _goBack,
-        ),
       ),
       body: Container(
         decoration: BoxDecoration(

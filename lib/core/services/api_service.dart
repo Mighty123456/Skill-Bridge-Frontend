@@ -11,9 +11,10 @@ class ApiService {
   ApiService._internal();
 
   // Get headers for JSON requests
-  Map<String, String> get _headers => {
+  Map<String, String> _buildHeaders(String? token) => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
       };
 
   // Get headers for multipart/form-data (file uploads)
@@ -24,19 +25,19 @@ class ApiService {
   // Handle API response
   Map<String, dynamic> _handleResponse(http.Response response) {
     try {
-      final data = json.decode(response.body);
+      final body = json.decode(response.body);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return {
-          'success': true,
-          'data': data,
-          'message': data['message'] ?? 'Success',
+          'success': body['success'] ?? true,
+          'data': body['data'] ?? body, // Unwrap the 'data' field if it exists
+          'message': body['message'] ?? 'Success',
         };
       } else {
         return {
           'success': false,
-          'message': data['message'] ?? 'An error occurred',
-          'errors': data['errors'] ?? [],
+          'message': body['message'] ?? 'An error occurred',
+          'errors': body['errors'] ?? [],
         };
       }
     } catch (e) {
@@ -48,10 +49,10 @@ class ApiService {
   }
 
   // GET request
-  Future<Map<String, dynamic>> get(String endpoint, {String? baseUrl}) async {
+  Future<Map<String, dynamic>> get(String endpoint, {String? baseUrl, String? token}) async {
     try {
       final url = Uri.parse('${baseUrl ?? ApiConfig.authBaseUrl}$endpoint');
-      final response = await http.get(url, headers: _headers).timeout(ApiConfig.timeout);
+      final response = await http.get(url, headers: _buildHeaders(token)).timeout(ApiConfig.timeout);
       return _handleResponse(response);
     } catch (e) {
       final url = '${baseUrl ?? ApiConfig.authBaseUrl}$endpoint';
@@ -67,13 +68,41 @@ class ApiService {
     String endpoint,
     Map<String, dynamic> data, {
     String? baseUrl,
+    String? token,
   }) async {
     try {
       final url = Uri.parse('${baseUrl ?? ApiConfig.authBaseUrl}$endpoint');
       final response = await http
           .post(
             url,
-            headers: _headers,
+            headers: _buildHeaders(token),
+            body: json.encode(data),
+          )
+          .timeout(ApiConfig.timeout);
+
+      return _handleResponse(response);
+    } catch (e) {
+      final url = '${baseUrl ?? ApiConfig.authBaseUrl}$endpoint';
+      return {
+        'success': false,
+        'message': 'Network error on $url: ${e.toString()}',
+      };
+    }
+  }
+
+  // PATCH request
+  Future<Map<String, dynamic>> patch(
+    String endpoint,
+    Map<String, dynamic> data, {
+    String? baseUrl,
+    String? token,
+  }) async {
+    try {
+      final url = Uri.parse('${baseUrl ?? ApiConfig.authBaseUrl}$endpoint');
+      final response = await http
+          .patch(
+            url,
+            headers: _buildHeaders(token),
             body: json.encode(data),
           )
           .timeout(ApiConfig.timeout);

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../../shared/themes/app_theme.dart';
-
+import 'package:skillbridge_mobile/features/auth/data/auth_service.dart';
+import 'package:skillbridge_mobile/features/tenant/presentation/pages/tenant_main_screen.dart';
+import 'package:skillbridge_mobile/features/worker/presentation/pages/worker_main_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -60,12 +62,40 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
+    _checkAuthAndNavigate();
+  }
 
-    Timer(const Duration(milliseconds: 3000), () {
+  Future<void> _checkAuthAndNavigate() async {
+    await Future.delayed(const Duration(milliseconds: 3000));
+    
+    if (!mounted) return;
+
+    try {
+      final authService = AuthService();
+      final result = await authService.getMe();
+      
+      if (!mounted) return;
+      
+      if (result['success'] == true && result['data'] != null) {
+        final user = result['data']['user'];
+        final role = user['role']?.toString().toLowerCase() ?? '';
+        
+        // User is logged in, navigate to appropriate main screen
+        if (role == 'worker') {
+          Navigator.of(context).pushReplacementNamed(WorkerMainScreen.routeName);
+        } else {
+          Navigator.of(context).pushReplacementNamed(TenantMainScreen.routeName);
+        }
+      } else {
+        // User is not logged in, show onboarding
+        Navigator.of(context).pushReplacementNamed(OnboardingScreen.routeName);
+      }
+    } catch (e) {
+      // Error or no token, show onboarding
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(OnboardingScreen.routeName);
       }
-    });
+    }
   }
 
   @override

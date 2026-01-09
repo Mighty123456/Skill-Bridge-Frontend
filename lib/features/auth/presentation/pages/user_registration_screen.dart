@@ -317,8 +317,9 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
-        leading: BackButton(color: _activeColor),
+        automaticallyImplyLeading: false,
       ),
       body: Container(
         height: double.infinity,
