@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
 
 class QuotationCard extends StatelessWidget {
   final String workerName;
@@ -10,6 +10,8 @@ class QuotationCard extends StatelessWidget {
   final bool isTopRated;
   final List<String> badges;
   final String imageUrl;
+  final VoidCallback? onSelected;
+  final String? notes;
 
   const QuotationCard({
     super.key,
@@ -21,11 +23,14 @@ class QuotationCard extends StatelessWidget {
     required this.isTopRated,
     required this.badges,
     required this.imageUrl,
+    this.onSelected,
+    this.notes,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -35,6 +40,7 @@ class QuotationCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (isTopRated)
             Container(
@@ -53,11 +59,16 @@ class QuotationCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(radius: 30, backgroundImage: NetworkImage(imageUrl)),
+                    CircleAvatar(
+                      radius: 25, 
+                      backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
+                      child: Text(workerName[0].toUpperCase(), style: TextStyle(color: AppTheme.colors.primary, fontWeight: FontWeight.bold)),
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
@@ -68,15 +79,17 @@ class QuotationCard extends StatelessWidget {
                           Row(
                             children: [
                               const Icon(Icons.star, color: Colors.amber, size: 16),
-                              Text(' $rating', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text(' ($jobsCompleted jobs)', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                              Text(' $rating', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Text(' ($jobsCompleted jobs)', style: const TextStyle(color: Colors.grey, fontSize: 11)),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 4,
-                            children: badges.map((b) => _buildBadge(b)).toList(),
-                          ),
+                          if (badges.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 4,
+                              children: badges.map((b) => _buildBadge(b)).toList(),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -89,6 +102,11 @@ class QuotationCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (notes != null && notes!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  const Text('Notes:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black54)),
+                  Text(notes!, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                ],
                 const Divider(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -96,14 +114,15 @@ class QuotationCard extends StatelessWidget {
                     _buildInfoItem(Icons.timer_outlined, 'Timeline', estimatedTime),
                     _buildInfoItem(Icons.verified_user_outlined, 'Guarantee', '7 Days'),
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/job-execution');
-                      },
+                      onPressed: onSelected,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                        minimumSize: const Size(100, 36),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+                        minimumSize: const Size(100, 40),
+                        backgroundColor: AppTheme.colors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('Select'),
+                      child: const Text('Select', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),

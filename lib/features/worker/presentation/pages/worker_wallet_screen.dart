@@ -11,6 +11,9 @@ class WorkerWalletScreen extends StatelessWidget {
       backgroundColor: AppTheme.colors.background,
       appBar: AppBar(
         title: const Text('Wallet & Earnings'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black,
         actions: [
           IconButton(
             icon: const Icon(Icons.help_outline),
@@ -25,7 +28,15 @@ class WorkerWalletScreen extends StatelessWidget {
           children: [
             _buildBalanceCard(),
             const SizedBox(height: 24),
-            Text('Recent Transactions', style: Theme.of(context).textTheme.headlineMedium),
+            _buildActionButtons(),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Recent Transactions', style: Theme.of(context).textTheme.headlineMedium),
+                TextButton(onPressed: () {}, child: const Text('View All')),
+              ],
+            ),
             const SizedBox(height: 12),
             _buildTransactionList(),
           ],
@@ -40,26 +51,32 @@ class WorkerWalletScreen extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.colors.primary, AppTheme.colors.primaryDark],
+          colors: [AppTheme.colors.primary, const Color(0xFF005555)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: AppTheme.colors.primary.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Available Balance',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
+           Row(
+             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+             children: [
+               const Text(
+                 'Total Balance',
+                 style: TextStyle(color: Colors.white70, fontSize: 14),
+               ),
+               Icon(Icons.account_balance_wallet_outlined, color: Colors.white.withValues(alpha: 0.7)),
+             ],
+           ),
           const SizedBox(height: 8),
           const Text(
             '₹8,450.00',
@@ -67,6 +84,7 @@ class WorkerWalletScreen extends StatelessWidget {
               color: Colors.white,
               fontSize: 36,
               fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
           ),
           const SizedBox(height: 24),
@@ -77,25 +95,9 @@ class WorkerWalletScreen extends StatelessWidget {
               ),
               Container(width: 1, height: 40, color: Colors.white24),
               Expanded(
-                child: _buildBalanceInfo('Commission', '₹450.00'),
+                child: _buildBalanceInfo('Withdrawable', '₹6,350.00'),
               ),
             ],
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: AppTheme.colors.primary,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text(
-              'Withdraw Money',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
           ),
         ],
       ),
@@ -104,6 +106,7 @@ class WorkerWalletScreen extends StatelessWidget {
 
   Widget _buildBalanceInfo(String label, String value) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -114,8 +117,41 @@ class WorkerWalletScreen extends StatelessWidget {
           value,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.arrow_downward),
+            label: const Text('Withdraw'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.colors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.history),
+            label: const Text('History'),
+             style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.colors.onSurface,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
           ),
         ),
       ],
@@ -128,30 +164,51 @@ class WorkerWalletScreen extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: 5,
       itemBuilder: (context, index) {
-        return Card(
+        final isCredit = index % 2 == 0;
+        return Container(
           margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: CircleAvatar(
-              backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
+              backgroundColor: isCredit ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
               child: Icon(
-                index % 2 == 0 ? Icons.work_rounded : Icons.account_balance_wallet_rounded,
-                color: AppTheme.colors.primary,
+                isCredit ? Icons.arrow_downward : Icons.arrow_upward,
+                color: isCredit ? Colors.green : Colors.red,
+                size: 20,
               ),
             ),
-            title: Text(index % 2 == 0 ? 'Kitchen Sink Repair' : 'Withdrawal to Bank'),
-            subtitle: Text(index % 2 == 0 ? 'Job Completed' : 'Completed'),
+            title: Text(
+              isCredit ? 'Payment Received' : 'Withdrawal to Bank',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            subtitle: Text(
+              isCredit ? 'Kitchen Sink Repair' : 'HDFC Bank **** 1234',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  index % 2 == 0 ? '+ ₹400' : '- ₹2,000',
+                  '${isCredit ? "+" : "-"} ₹${isCredit ? "400" : "2,000"}',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: index % 2 == 0 ? Colors.green : Colors.red,
+                    color: isCredit ? Colors.green : Colors.red,
                     fontSize: 16,
                   ),
                 ),
+                const SizedBox(height: 4),
                 const Text(
                   '12 Oct 2023',
                   style: TextStyle(fontSize: 10, color: Colors.grey),

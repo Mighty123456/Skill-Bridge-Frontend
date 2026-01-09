@@ -10,16 +10,18 @@ class AvailableJobCard extends StatelessWidget {
   final String distance;
   final String remainingTime;
 
-  const AvailableJobCard({
+  final Map<String, dynamic> jobData;
+
+  AvailableJobCard({
     super.key,
-    required this.title,
-    required this.location,
-    required this.urgency,
-    required this.estimatedPrice,
-    required this.postedTime,
-    required this.distance,
-    required this.remainingTime,
-  });
+    required this.jobData,
+  })  : title = jobData['job_title'] ?? 'Untitled Job',
+        location = jobData['location']?['address_text'] ?? 'Unknown Location',
+        urgency = jobData['urgency_level'] ?? 'Normal',
+        estimatedPrice = 'Quote Required',
+        postedTime = 'Just now', // Could calculate from jobData['created_at']
+        distance = 'Nearby',
+        remainingTime = 'Limited';
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +122,7 @@ class AvailableJobCard extends StatelessWidget {
               ),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, '/job-bid');
+                  Navigator.pushNamed(context, '/job-bid', arguments: jobData);
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 20),

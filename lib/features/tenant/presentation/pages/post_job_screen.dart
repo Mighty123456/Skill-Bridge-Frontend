@@ -21,7 +21,7 @@ class PostJobScreen extends StatefulWidget {
 class _PostJobScreenState extends State<PostJobScreen> {
   String? _selectedSkill;
   String _urgency = 'medium'; // Changed default to lowercase per backend enum
-  bool _materialRequired = false;
+
   bool _isLoading = false;
   int _quotationWindowDays = 1;
   final TextEditingController _descriptionController = TextEditingController();
@@ -196,7 +196,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         skill: finalSkill, 
         urgency: _urgency,
         quotationWindowDays: _quotationWindowDays,
-        materialRequired: _materialRequired,
+
         location: {
           'coordinates': [_currentPosition!.longitude, _currentPosition!.latitude],
           'address': _currentAddress ?? 'Unknown Location'
@@ -309,7 +309,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   const SizedBox(height: 28),
                   
                   // Additional Options
-                  _buildMaterialToggle(),
+
                   
                   
                   const SizedBox(height: 32),
@@ -706,69 +706,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
-  Widget _buildMaterialToggle() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.colors.secondary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.shopping_bag_outlined,
-              color: AppTheme.colors.secondary,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Materials Required',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Worker should bring parts',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch.adaptive(
-            value: _materialRequired,
-            onChanged: (val) => setState(() => _materialRequired = val),
-            activeTrackColor: AppTheme.colors.primary,
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Widget _buildSubmitButton(BuildContext context) {
     return SizedBox(

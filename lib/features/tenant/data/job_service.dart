@@ -11,7 +11,7 @@ class JobService {
     required Map<String, dynamic> location,
     required String urgency,
     int quotationWindowDays = 1,
-    bool materialRequired = false,
+
   }) async {
     final token = await AuthService.getToken();
     if (token == null) return {'success': false, 'message': 'Not authenticated'};
@@ -34,7 +34,7 @@ class JobService {
              'address_text': location['address']
           },
           'urgency_level': urgency,
-          'material_required': materialRequired,
+
           'quotation_window_hours': quotationWindowDays * 24, // Convert days to hours
         }),
       );

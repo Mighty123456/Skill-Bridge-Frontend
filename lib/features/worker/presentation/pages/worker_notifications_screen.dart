@@ -40,7 +40,10 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.colors.background,
       appBar: AppBar(
-        title: const Text('Notifications & Support'),
+        title: const Text('Notifications'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -48,20 +51,20 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
               ? _buildEmptyState()
               : RefreshIndicator(
                   onRefresh: _handleRefresh,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     itemCount: _notifications.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final notification = _notifications[index];
                       return _buildNotificationCard(notification);
                     },
                   ),
                 ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        label: const Text('Support / Dispute'),
-        icon: const Icon(Icons.support_agent_rounded),
-        backgroundColor: AppTheme.colors.secondary,
+        backgroundColor: AppTheme.colors.primary,
+        child: const Icon(Icons.support_agent_rounded, color: Colors.white),
       ),
     );
   }
@@ -71,15 +74,34 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_off_outlined, size: 60, color: Colors.grey[400]),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                )
+              ]
+            ),
+            child: Icon(Icons.notifications_none_rounded, size: 48, color: Colors.grey[400]),
+          ),
           const SizedBox(height: 16),
           Text(
-            'No notifications yet',
+            'All Caught Up!',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'No new notifications at the moment.',
+            style: TextStyle(color: Colors.grey[600]),
           ),
         ],
       ),
@@ -96,86 +118,133 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
     
     switch (type) {
       case 'job_alert':
-        icon = Icons.notification_important_rounded;
+        icon = Icons.work_outline_rounded;
         color = Colors.orange;
         break;
       case 'payment':
-        icon = Icons.account_balance_wallet_rounded;
+        icon = Icons.attach_money_rounded;
         color = Colors.green;
         break;
       case 'job_update':
-        icon = Icons.work_history_rounded;
+        icon = Icons.update_rounded;
         color = Colors.blue;
         break;
       default:
-        icon = Icons.info_outline_rounded;
+        icon = Icons.notifications_none_rounded;
         color = AppTheme.colors.primary;
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: isRead ? Colors.white : color.withValues(alpha: 0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
-          child: Icon(icon, color: color, size: 22),
-        ),
-        title: Text(
-          notification['title'] ?? 'Notification',
-          style: TextStyle(
-            fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
-            fontSize: 15,
+    return GestureDetector(
+      onTap: () {
+        if (!isRead) {
+          NotificationService.markAsRead(notification['_id']);
+          setState(() {
+            notification['read'] = true;
+          });
+        }
+         
+        // Navigate to detail if it's a job alert
+        if (type == 'job_alert' && notification['data'] != null && notification['data']['jobId'] != null) {
+          // Navigate to details
+          Navigator.push(
+            context, 
+            MaterialPageRoute(
+              builder: (_) => JobDetailScreen(jobId: notification['data']['jobId'])
+            )
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isRead ? Colors.white : color.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isRead ? Colors.transparent : color.withValues(alpha: 0.2),
+            width: 1
           ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 6),
-            Text(
-              notification['message'] ?? '',
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _formatDate(notification['createdAt']),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
+          boxShadow: [
+             BoxShadow(
+                color: Colors.black.withValues(alpha: isRead ? 0.03 : 0.0), // No shadow for unread to make it flat/highlighted
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
           ],
         ),
-        onTap: () {
-          if (!isRead) {
-            NotificationService.markAsRead(notification['_id']);
-            setState(() {
-              notification['read'] = true;
-            });
-          }
-           
-          // Navigate to detail if it's a job alert
-          if (type == 'job_alert' && notification['data'] != null && notification['data']['jobId'] != null) {
-            // Navigate to details
-            Navigator.push(
-              context, 
-              MaterialPageRoute(
-                builder: (_) => JobDetailScreen(jobId: notification['data']['jobId'])
-              )
-            );
-          }
-        },
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isRead ? Colors.grey[100] : color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: isRead ? Colors.grey : color, size: 20),
+            ),
+             const SizedBox(width: 16),
+             Expanded(
+               child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Row(
+                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                     children: [
+                       Text(
+                         notification['title'] ?? 'Notification',
+                         style: TextStyle(
+                           fontWeight: isRead ? FontWeight.w600 : FontWeight.bold,
+                           fontSize: 15,
+                           color: isRead ? Colors.black87 : Colors.black,
+                         ),
+                       ),
+                       if (!isRead)
+                         Container(
+                           width: 8,
+                           height: 8,
+                           decoration: BoxDecoration(
+                             color: color,
+                             shape: BoxShape.circle,
+                           ),
+                         )
+                     ],
+                   ),
+                   const SizedBox(height: 6),
+                   Text(
+                     notification['message'] ?? '',
+                     style: TextStyle(
+                       fontSize: 13, 
+                       color: isRead ? Colors.grey[600] : Colors.black87,
+                       height: 1.4
+                     ),
+                   ),
+                   const SizedBox(height: 8),
+                   Text(
+                     _formatTimeAgo(notification['createdAt']),
+                     style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                   ),
+                 ],
+               ),
+             )
+          ],
+        ),
       ),
     );
   }
 
-  String _formatDate(String? dateStr) {
+  String _formatTimeAgo(String? dateStr) {
     if (dateStr == null) return '';
     final date = DateTime.tryParse(dateStr);
     if (date == null) return '';
-    // Simple format for now
-    return '${date.day}/${date.month} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
   }
 }

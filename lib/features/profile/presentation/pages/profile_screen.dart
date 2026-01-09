@@ -268,38 +268,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ]),
                       const SizedBox(height: 28),
                       
-                      _buildSectionHeader('WORK PORTFOLIO'),
-                      Container(
-                        height: 120,
-                        margin: const EdgeInsets.only(bottom: 28),
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: 4,
-                          itemBuilder: (context, index) {
-                            return Container(
-                              width: 120,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(16),
-                                image: const DecorationImage(
-                                  image: NetworkImage('https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=200'),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              child: index == 3 ? Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.black45,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: const Center(
-                                  child: Text('+5 more', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                                ),
-                              ) : null,
-                            );
-                          },
-                        ),
-                      ),
 
                       _buildSectionHeader('SKILLS & EXPERTISE'),
                       _buildSettingsCard([

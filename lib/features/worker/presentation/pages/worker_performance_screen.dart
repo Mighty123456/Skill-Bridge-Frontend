@@ -10,18 +10,36 @@ class WorkerPerformanceScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.colors.background,
       appBar: AppBar(
-        title: const Text('Performance & Badges'),
+        title: const Text('Performance'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildRatingSummary(),
+            _buildRatingCard(),
             const SizedBox(height: 24),
-            _buildBadgeProgress(context),
+            _buildStatsGrid(),
+             const SizedBox(height: 24),
+            Row(
+              children: [
+                 const Icon(Icons.workspace_premium_rounded, color: Colors.amber),
+                 const SizedBox(width: 8),
+                 Text('Your Badges', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildBadgeList(),
             const SizedBox(height: 24),
-            Text('Recent Feedback', style: Theme.of(context).textTheme.headlineMedium),
+             Row(
+              children: [
+                 const Icon(Icons.forum_outlined, color: Colors.blueGrey),
+                 const SizedBox(width: 8),
+                 Text('Recent Reviews', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
             const SizedBox(height: 12),
             _buildFeedbackList(),
           ],
@@ -30,113 +48,131 @@ class WorkerPerformanceScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRatingSummary() {
+  Widget _buildRatingCard() {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.colors.primary,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+           BoxShadow(color: AppTheme.colors.primary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8)),
+        ]
       ),
       child: Column(
         children: [
-          const Text('Average Rating', style: TextStyle(color: Colors.grey, fontSize: 16)),
-          const SizedBox(height: 12),
+          const Text('Overall Rating', style: TextStyle(color: Colors.white70, fontSize: 14, letterSpacing: 1)),
+          const SizedBox(height: 8),
           const Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text('4.9', style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
-              Text('/5', style: TextStyle(fontSize: 24, color: Colors.grey)),
+              Text('4.9', style: TextStyle(fontSize: 56, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('/5', style: TextStyle(fontSize: 20, color: Colors.white70)),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) => const Icon(Icons.star_rounded, color: Colors.amber, size: 32)),
+            children: List.generate(5, (i) => const Icon(Icons.star_rounded, color: Colors.amber, size: 36)),
           ),
           const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildSimpleStat('124', 'Jobs Done'),
-              _buildSimpleStat('98%', 'Completion'),
-              _buildSimpleStat('45 mins', 'Avg Response'),
-            ],
-          ),
+          Container(
+             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+             decoration: BoxDecoration(
+               color: Colors.white.withValues(alpha: 0.1),
+               borderRadius: BorderRadius.circular(30)
+             ),
+             child: const Text('Top Rated Worker', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+          )
         ],
       ),
     );
   }
 
-  Widget _buildSimpleStat(String value, String label) {
-    return Column(
+  Widget _buildStatsGrid() {
+    return Row(
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Expanded(child: _buildStatItem('124', 'Jobs Done', Icons.check_circle_outline, Colors.green)),
+        const SizedBox(width: 16),
+        Expanded(child: _buildStatItem('98%', 'Completion', Icons.task_alt, Colors.blue)),
+        const SizedBox(width: 16),
+         Expanded(child: _buildStatItem('45m', 'Res. Time', Icons.timer_outlined, Colors.orange)),
       ],
     );
   }
 
-  Widget _buildBadgeProgress(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Badge Progress', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-          child: Column(
-            children: [
-              _buildBadgeItem('Elite Worker', 0.8, '80/100 jobs'),
-              const Divider(),
-              _buildBadgeItem('Quick Responder', 0.4, '12/30 instant responses'),
-              const Divider(),
-              _buildBadgeItem('Five Star Pro', 0.95, '48/50 five-star reviews'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBadgeItem(String name, double progress, String detail) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
+  Widget _buildStatItem(String value, String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+           BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+        ]
+      ),
+      child: Column(
         children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFFE0E0E0),
-            child: Icon(Icons.workspace_premium, color: Colors.amber),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(detail, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: const Color(0xFFF5F5F5),
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.colors.primary),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ],
-            ),
-          ),
+           Icon(icon, color: color, size: 28),
+           const SizedBox(height: 12),
+           Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+           const SizedBox(height: 4),
+           Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11), textAlign: TextAlign.center),
         ],
       ),
     );
+  }
+
+  Widget _buildBadgeList() {
+    return SizedBox(
+      height: 140,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        children: [
+           _buildBadgeCard('Elite Pro', 'Completed 100+ Jobs', Colors.amber, 0.8),
+           const SizedBox(width: 16),
+           _buildBadgeCard('Swift', 'Fast Response Time', Colors.purple, 0.6),
+            const SizedBox(width: 16),
+           _buildBadgeCard('Verified', 'Identity Verified', Colors.blue, 1.0),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadgeCard(String title, String subtitle, Color color, double progress) {
+     return Container(
+       width: 140,
+       padding: const EdgeInsets.all(16),
+       decoration: BoxDecoration(
+         color: Colors.white,
+         borderRadius: BorderRadius.circular(16),
+         border: Border.all(color: color.withValues(alpha: 0.1), width: 1.5),
+         boxShadow: [
+           BoxShadow(color: color.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+         ]
+       ),
+       child: Column(
+         mainAxisAlignment: MainAxisAlignment.center,
+         children: [
+           Container(
+             padding: const EdgeInsets.all(8),
+             decoration: BoxDecoration(
+               color: color.withValues(alpha: 0.1),
+               shape: BoxShape.circle,
+             ),
+             child: Icon(Icons.workspace_premium, color: color, size: 24),
+           ),
+           const SizedBox(height: 12),
+           Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+           const SizedBox(height: 4),
+           Text(subtitle, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center, maxLines: 2),
+           const SizedBox(height: 12),
+           LinearProgressIndicator(value: progress, backgroundColor: color.withValues(alpha: 0.1), valueColor: AlwaysStoppedAnimation(color), borderRadius: BorderRadius.circular(2)),
+         ],
+       ),
+     );
   }
 
   Widget _buildFeedbackList() {
@@ -145,28 +181,48 @@ class WorkerPerformanceScreen extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: 3,
       itemBuilder: (context, index) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Rajesh Kumar', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Row(
-                      children: List.generate(5, (i) => const Icon(Icons.star, size: 14, color: Colors.amber)),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.1))
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                     radius: 16,
+                     backgroundColor: Colors.grey[200],
+                     child: const Icon(Icons.person, size: 16, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Rajesh Kumar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Kitchen Wiring', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      ],
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                const Text('Excellent work! Professional and arrived on time.', style: TextStyle(color: Colors.black87)),
-                const SizedBox(height: 8),
-                const Text('Kitchen Wiring - 12 Jan 2024', style: TextStyle(color: Colors.grey, fontSize: 10)),
-              ],
-            ),
+                  ),
+                  Row(
+                    children: List.generate(5, (i) => const Icon(Icons.star, size: 14, color: Colors.amber)),
+                  )
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Excellent work! Professional and arrived exactly on time. Fixed the issue quickly.',
+                style: TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+              ),
+              const SizedBox(height: 8),
+              const Text('12 Jan 2024', style: TextStyle(color: Colors.grey, fontSize: 10)),
+            ],
           ),
         );
       },

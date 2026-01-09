@@ -1,68 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
+import 'package:skillbridge_mobile/features/tenant/data/tenant_job_service.dart';
 
-class MyJobsScreen extends StatelessWidget {
+class MyJobsScreen extends StatefulWidget {
   const MyJobsScreen({super.key});
 
+  @override
+  State<MyJobsScreen> createState() => _MyJobsScreenState();
+}
+
+class _MyJobsScreenState extends State<MyJobsScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F9FB),
+        backgroundColor: AppTheme.colors.background,
         appBar: const PremiumAppBar(title: 'My Jobs'),
         body: Column(
           children: [
-            const SizedBox(height: 8),
-            // Premium Tab Selector
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8ECF0),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: TabBar(
-                indicator: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: AppTheme.colors.primary,
-                unselectedLabelColor: Colors.grey[500],
-                labelStyle: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 13,
-                  letterSpacing: 0.3,
-                ),
-                unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
-                tabs: const [
-                  Tab(text: 'ACTIVE'),
-                  Tab(text: 'PENDING'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Tab Views
+            const SizedBox(height: 16),
+            _buildTabSelector(),
+            const SizedBox(height: 16),
             Expanded(
               child: TabBarView(
                 physics: const BouncingScrollPhysics(),
                 children: [
-                  _buildActiveJobsList(),
-                  _buildPendingJobsList(),
+                  _JobsList(status: 'active'), // In Progress / Assigned
+                  _JobsList(status: 'pending'), // Open
                 ],
               ),
             ),
@@ -72,218 +38,360 @@ class MyJobsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveJobsList() {
-    final jobs = [
-      {
-        'title': 'Kitchen Sink Repair',
-        'status': 'In Progress',
-        'worker': 'Rajesh Kumar',
-        'price': '₹450',
-        'time': 'Started 2h ago',
-        'icon': Icons.plumbing_rounded,
-        'statusColor': Colors.green,
-      },
-      {
-        'title': 'Ceiling Fan Installation',
-        'status': 'Worker En Route',
-        'worker': 'Amit Sharma',
-        'price': '₹300',
-        'time': 'Arriving at 3:00 PM',
-        'icon': Icons.electric_bolt_rounded,
-        'statusColor': Colors.blue,
-      },
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      itemCount: jobs.length,
-      itemBuilder: (context, index) => _buildJobCard(jobs[index]),
-    );
-  }
-
-  Widget _buildPendingJobsList() {
-    final jobs = [
-      {
-        'title': 'House Painting',
-        'status': '5 Quotes Received',
-        'worker': 'Review & Select',
-        'price': 'Bidding',
-        'time': 'Posted 3h ago',
-        'icon': Icons.format_paint_rounded,
-        'statusColor': Colors.orange,
-      },
-      {
-        'title': 'AC Servicing',
-        'status': '2 Quotes Received',
-        'worker': 'Review & Select',
-        'price': 'Bidding',
-        'time': 'Posted 5h ago',
-        'icon': Icons.ac_unit_rounded,
-        'statusColor': Colors.orange,
-      },
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      itemCount: jobs.length,
-      itemBuilder: (context, index) => _buildJobCard(jobs[index]),
-    );
-  }
-
-  Widget _buildJobCard(Map<String, dynamic> job) {
+  Widget _buildTabSelector() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 15,
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Main Content
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Icon Container
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppTheme.colors.primary.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        job['icon'],
-                        color: AppTheme.colors.primary,
-                        size: 26,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    
-                    // Job Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            job['title'],
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF1F2937),
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          
-                          // Status Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: (job['statusColor'] as Color).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: job['statusColor'],
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  job['status'].toString().toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                    color: job['statusColor'],
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Price
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          job['price'],
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: job['price'] == 'Bidding' 
-                                ? Colors.grey[400] 
-                                : AppTheme.colors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+      child: TabBar(
+        indicator: BoxDecoration(
+          color: AppTheme.colors.primary,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.colors.primary.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
-          ),
-          
-          // Footer
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(24),
-              ),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 12,
-                  backgroundColor: Colors.grey[200],
-                  child: Icon(Icons.person, size: 14, color: Colors.grey[600]),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    job['worker'],
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF4B5563),
-                    ),
-                  ),
-                ),
-                Icon(Icons.access_time_rounded, size: 14, color: Colors.grey[400]),
-                const SizedBox(width: 6),
-                Text(
-                  job['time'],
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.grey[600],
+        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+        tabs: const [
+          Tab(text: 'ACTIVE'),
+          Tab(text: 'PENDING'),
         ],
       ),
     );
   }
 }
+
+class _JobsList extends StatefulWidget {
+  final String status;
+  const _JobsList({required this.status});
+
+  @override
+  State<_JobsList> createState() => _JobsListState();
+}
+
+class _JobsListState extends State<_JobsList> {
+  bool _isLoading = true;
+  List<dynamic> _jobs = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchJobs();
+  }
+
+  Future<void> _fetchJobs() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final result = await TenantJobService.getPostedJobs(status: widget.status);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+      if (result['success']) {
+        _jobs = result['data'];
+      } else {
+        _error = result['message'];
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: AppTheme.colors.primary,
+          strokeWidth: 3,
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline_rounded, size: 48, color: Colors.red[300]),
+            const SizedBox(height: 16),
+            Text(_error!, style: const TextStyle(color: Colors.grey)),
+            TextButton(
+              onPressed: _fetchJobs,
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_jobs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+             Container(
+               padding: const EdgeInsets.all(24),
+               decoration: BoxDecoration(
+                 color: Colors.white,
+                 shape: BoxShape.circle,
+                 boxShadow: [
+                   BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 10)),
+                 ]
+               ),
+               child: Icon(
+                 widget.status == 'active' 
+                   ? Icons.work_off_rounded 
+                   : Icons.pending_actions_rounded, 
+                 size: 48, 
+                 color: Colors.grey[400]
+               ),
+             ),
+            const SizedBox(height: 24),
+            Text(
+              widget.status == 'active' ? 'No active jobs' : 'No pending jobs',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+             const SizedBox(height: 8),
+            Text(
+              widget.status == 'active' 
+                ? 'Jobs in progress will show here'
+                : 'Post a job to get started',
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchJobs,
+      color: AppTheme.colors.primary,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        itemCount: _jobs.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 16),
+        itemBuilder: (context, index) => _buildJobCard(_jobs[index]),
+      ),
+    );
+  }
+
+  Widget _buildJobCard(dynamic job) {
+    final bool isPending = widget.status == 'pending';
+    final String status = job['status'] ?? 'OPEN';
+    final String title = job['job_title'] ?? 'Untitled';
+    final String timeAgo = _formatTimeAgo(job['created_at']);
+    
+    // Status color mapping
+    Color statusColor;
+    if (status == 'open') {
+      statusColor = Colors.orange;
+    } else if (status == 'in_progress') {
+      statusColor = Colors.blue;
+    } else if (status == 'assigned') {
+      statusColor = Colors.purple;
+    } else if (status == 'completed') {
+      statusColor = Colors.green;
+    } else {
+      statusColor = Colors.grey;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            // Navigate to detail
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.colors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        _getIconForTitle(title),
+                        color: AppTheme.colors.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                           Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              status.toUpperCase().replaceAll('_', ' '),
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                 const SizedBox(height: 20),
+                 Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
+                 const SizedBox(height: 12),
+                 Row(
+                   children: [
+                     Icon(Icons.access_time_rounded, size: 14, color: Colors.grey[400]),
+                     const SizedBox(width: 6),
+                     Text(
+                       'Posted $timeAgo',
+                       style: TextStyle(color: Colors.grey[500], fontSize: 12, fontWeight: FontWeight.w500),
+                     ),
+                     const Spacer(),
+                     if (isPending)
+                        Text(
+                          'Waiting for quotes',
+                          style: TextStyle(color: AppTheme.colors.secondary, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                     if (!isPending && job['selected_worker_id'] != null)
+                        Row(
+                          children: [
+                             CircleAvatar(
+                               radius: 10,
+                               backgroundColor: Colors.grey[200],
+                               child: const Icon(Icons.person, size: 12, color: Colors.grey),
+                             ),
+                             const SizedBox(width: 6),
+                             Text(
+                               'Worker Assigned',
+                               style: TextStyle(color: Colors.grey[700], fontSize: 12, fontWeight: FontWeight.w600),
+                             ),
+                          ],
+                        )
+                   ],
+                  ),
+                  if (status == 'open') ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final result = await Navigator.pushNamed(
+                            context,
+                            '/quotation-comparison',
+                            arguments: job,
+                          );
+                          if (result == true) {
+                            _fetchJobs();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.colors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 0,
+                        ),
+                        child: const Text('View Quotations', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+  IconData _getIconForTitle(String title) {
+    final t = title.toLowerCase();
+    if (t.contains('plumb')) return Icons.plumbing_rounded;
+    if (t.contains('electr')) return Icons.electric_bolt_rounded;
+    if (t.contains('clean')) return Icons.cleaning_services_rounded;
+    if (t.contains('paint')) return Icons.format_paint_rounded;
+    if (t.contains('ac') || t.contains('cool')) return Icons.ac_unit_rounded;
+    return Icons.handyman_rounded;
+  }
+
+  String _formatTimeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return '';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}m ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inDays}d ago';
+    }
+  }
+}
+

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../widgets/available_job_card.dart';
@@ -5,10 +6,60 @@ import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import 'worker_wallet_screen.dart';
 import 'worker_performance_screen.dart';
 import 'worker_notifications_screen.dart';
+import '../../data/worker_dashboard_service.dart';
+// import 'package:intl/intl.dart'; // Add intl dependency if needed, or manual formatting
 
-
-class WorkerDashboardScreen extends StatelessWidget {
+class WorkerDashboardScreen extends StatefulWidget {
   const WorkerDashboardScreen({super.key});
+
+  @override
+  State<WorkerDashboardScreen> createState() => _WorkerDashboardScreenState();
+}
+
+class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
+  bool _isLoading = true;
+  List<dynamic> _jobs = [];
+  String? _error;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchJobs();
+    // Auto-refresh every 30 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _fetchJobs(isBackground: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchJobs({bool isBackground = false}) async {
+    if (!isBackground) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
+    final result = await WorkerDashboardService.getWorkerFeed();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+      if (result['success']) {
+        _jobs = result['data'];
+      } else {
+        if (!isBackground) _error = result['message'];
+      }
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -35,116 +86,139 @@ class WorkerDashboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Professional Page Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.colors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'WORKER DASHBOARD',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.colors.primary,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerPerformanceScreen()));
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      body: RefreshIndicator(
+        onRefresh: () => _fetchJobs(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Professional Page Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withValues(alpha: 0.1),
+                      color: AppTheme.colors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Row(
+                    child: Text(
+                      'WORKER DASHBOARD',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.colors.primary,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerPerformanceScreen()));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
+                          SizedBox(width: 4),
+                          Text('Gold Pro', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Earning Summary
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerWalletScreen()));
+                },
+                child: _buildEarningsCard(),
+              ),
+              const SizedBox(height: 24),
+
+              // Performance Stats
+              Row(
+                children: [
+                  _buildStatCard('Rating', '4.9', Icons.star, Colors.amber),
+                  const SizedBox(width: 16),
+                  _buildStatCard('Jobs Done', '124', Icons.check_circle, Colors.green),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Available Jobs section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Jobs Near You', style: Theme.of(context).textTheme.headlineMedium),
+                  IconButton(
+                    onPressed: _fetchJobs, 
+                    icon: const Icon(Icons.refresh, size: 20),
+                    tooltip: 'Refresh',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              
+              if (_isLoading && _jobs.isEmpty)
+                const Center(child: Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: CircularProgressIndicator(),
+                ))
+              else if (_error != null)
+                Center(
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 40),
+                      const SizedBox(height: 8),
+                      Text(_error!, style: const TextStyle(color: Colors.red)),
+                      TextButton(onPressed: () => _fetchJobs(), child: const Text('Try Again'))
+                    ],
+                  ),
+                )
+              else if (_jobs.isEmpty)
+                 Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(40),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.workspace_premium, color: Colors.amber, size: 14),
-                        SizedBox(width: 4),
-                        Text('Gold Pro', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+                        Icon(Icons.work_off_outlined, size: 60, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text('No jobs available nearby.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                        SizedBox(height: 8),
+                        Text('We will notify you when new jobs match your skills.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                   ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _jobs.length,
+                  itemBuilder: (context, index) {
+                    final job = _jobs[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: AvailableJobCard(
+                        jobData: job,
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Earning Summary
-            GestureDetector(
-              onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerWalletScreen()));
-              },
-              child: _buildEarningsCard(),
-            ),
-            const SizedBox(height: 24),
-
-            // Performance Stats
-            Row(
-              children: [
-                _buildStatCard('Rating', '4.9', Icons.star, Colors.amber),
-                const SizedBox(width: 16),
-                _buildStatCard('Jobs Done', '124', Icons.check_circle, Colors.green),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Available Jobs section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Jobs Near You', style: Theme.of(context).textTheme.headlineMedium),
-                TextButton.icon(
-                  onPressed: () {}, 
-                  icon: const Icon(Icons.tune_rounded, size: 16),
-                  label: const Text('Filter'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const AvailableJobCard(
-              title: 'Kitchen Sink Leakage',
-              location: 'Sector 15, Gurgaon',
-              distance: '2.5 km',
-              urgency: 'Emergency',
-              remainingTime: '2h 15m',
-              estimatedPrice: '₹400 - ₹600',
-              postedTime: '5m ago',
-            ),
-            const SizedBox(height: 16),
-            const AvailableJobCard(
-              title: 'Full House Wiring',
-              location: 'DLF Phase 3, Gurgaon',
-              distance: '4.1 km',
-              urgency: 'Normal',
-              remainingTime: '1d 4h',
-              estimatedPrice: '₹2000 - ₹5000',
-              postedTime: '20m ago',
-            ),
-            const SizedBox(height: 16),
-            const AvailableJobCard(
-              title: 'CCTV Installation',
-              location: 'Sohna Road, Gurgaon',
-              distance: '1.2 km',
-              urgency: 'Normal',
-              remainingTime: '5h 30m',
-              estimatedPrice: '₹800 - ₹1200',
-              postedTime: '1h ago',
-            ),
-            const SizedBox(height: 40),
-          ],
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
