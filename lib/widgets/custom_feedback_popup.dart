@@ -158,14 +158,22 @@ class _CustomFeedbackPopupState extends State<CustomFeedbackPopup>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  widget.message,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppTheme.colors.onSurface.withValues(alpha: 0.6),
-                    height: 1.5,
+                const SizedBox(height: 12),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.3,
                   ),
-                  textAlign: TextAlign.center,
+                  child: SingleChildScrollView(
+                    child: Text(
+                      widget.message,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.colors.onSurface.withValues(alpha: 0.6),
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Container(

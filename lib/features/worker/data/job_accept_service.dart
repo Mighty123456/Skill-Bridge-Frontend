@@ -5,7 +5,7 @@ import '../../../../features/auth/data/auth_service.dart';
 
 class JobAcceptService {
   static Future<Map<String, dynamic>> getJobDetails(String jobId) async {
-    final token = AuthService.token;
+    final token = await AuthService.getToken();
     if (token == null) return {'success': false, 'message': 'Not authenticated'};
 
     try {
@@ -28,7 +28,7 @@ class JobAcceptService {
   }
 
   static Future<Map<String, dynamic>> acceptJob(String jobId) async {
-    final token = AuthService.token;
+    final token = await AuthService.getToken();
     if (token == null) return {'success': false, 'message': 'Not authenticated'};
 
     try {

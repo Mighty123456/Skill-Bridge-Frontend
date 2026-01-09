@@ -32,7 +32,15 @@ class AuthService {
     debugPrint('💾 Token saved to storage');
   }
 
-  // Get current token
+  // Get current token safely (loads if needed)
+  static Future<String?> getToken() async {
+    if (_token == null) {
+      await init();
+    }
+    return _token;
+  }
+
+  // Get current token property (synchronous)
   static String? get token => _token;
 
   // Clear token from memory and storage

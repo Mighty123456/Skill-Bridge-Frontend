@@ -41,6 +41,8 @@ dependencies:
   package_info_plus: any
   material_color_utilities: any
   characters: any
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

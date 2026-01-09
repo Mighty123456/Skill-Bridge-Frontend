@@ -8,17 +8,16 @@ class JobService {
     required String title,
     required String description,
     required String skill,
-    required String urgency,
     required Map<String, dynamic> location,
-    Map<String, dynamic>? budget,
+    required String urgency,
     int quotationWindowDays = 1,
+    bool materialRequired = false,
   }) async {
-    final token = AuthService.token;
-    if (token == null) {
-      return {'success': false, 'message': 'Not authenticated'};
-    }
+    final token = await AuthService.getToken();
+    if (token == null) return {'success': false, 'message': 'Not authenticated'};
 
     try {
+      // Map frontend args to new Backend Schema
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/jobs'),
         headers: {
@@ -26,24 +25,26 @@ class JobService {
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
-          'title': title,
-          'description': description,
-          'skill': skill,
-          'urgency': urgency.toLowerCase(),
-          'location': location,
-          'quotationWindowDays': quotationWindowDays,
-          if (budget != null) 'budget': budget,
+          'job_title': title,
+          'job_description': description,
+          'skill_required': skill,
+          'location': {
+             'lat': location['coordinates'][1], // Frontend sends [lng, lat], Model wants lat, lng
+             'lng': location['coordinates'][0],
+             'address_text': location['address']
+          },
+          'urgency_level': urgency,
+          'material_required': materialRequired,
+          'quotation_window_hours': quotationWindowDays * 24, // Convert days to hours
         }),
       );
 
       final data = jsonDecode(response.body);
-      
       if (response.statusCode == 201) {
-         return {'success': true, 'data': data['data']};
+        return {'success': true, 'data': data['data']};
       } else {
-         return {'success': false, 'message': data['message'] ?? 'Failed to post job'};
+        return {'success': false, 'message': data['message'] ?? 'Failed to create job'};
       }
-
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

@@ -1,8 +1,14 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import '../../data/job_service.dart';
 import '../../../../widgets/custom_feedback_popup.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as lat_lng;
 
 class PostJobScreen extends StatefulWidget {
   static const String routeName = '/post-job';
@@ -14,12 +20,22 @@ class PostJobScreen extends StatefulWidget {
 
 class _PostJobScreenState extends State<PostJobScreen> {
   String? _selectedSkill;
-  String _urgency = 'Normal';
+  String _urgency = 'medium'; // Changed default to lowercase per backend enum
   bool _materialRequired = false;
   bool _isLoading = false;
   int _quotationWindowDays = 1;
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _customSkillController = TextEditingController();
+  final MapController _mapController = MapController();
+
+  // Image State
+  final ImagePicker _picker = ImagePicker();
+  final List<File> _selectedImages = [];
+
+  // Location State
+  Position? _currentPosition;
+  String? _currentAddress;
+  bool _isLocationLoading = true;
 
   final List<Map<String, dynamic>> _skills = [
     {'name': 'Plumber', 'icon': Icons.plumbing_rounded},
@@ -32,9 +48,109 @@ class _PostJobScreenState extends State<PostJobScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLocationLoading = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Location services are disabled.');
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Location permissions are denied');
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Location permissions are permanently denied.');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high)
+      );
+      
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude
+      );
+
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            // Construct a decent address string
+            _currentAddress = [
+                place.subLocality, 
+                place.locality, 
+                place.administrativeArea, 
+                place.country
+              ].where((element) => element != null && element.isNotEmpty).join(', ');
+          } else {
+            _currentAddress = 'Unknown Location';
+          }
+          _isLocationLoading = false;
+        });
+        
+        // Move map to new location safely
+        if (_currentPosition != null) {
+          try {
+            _mapController.move(
+              lat_lng.LatLng(_currentPosition!.latitude, _currentPosition!.longitude), 
+              15.0
+            );
+          } catch (e) {
+            // Map might not be ready yet, which is fine as initialCenter will handle it
+            debugPrint('Map move skipped: $e');
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentAddress = 'Location not available';
+          _isLocationLoading = false;
+        });
+      }
+      debugPrint('Error getting location: $e');
+    }
+  }
+
+  Future<void> _pickImages() async {
+    try {
+      final List<XFile> pickedFiles = await _picker.pickMultiImage();
+      if (pickedFiles.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(pickedFiles.map((x) => File(x.path)));
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking images: $e');
+      if (mounted) {
+         CustomFeedbackPopup.show(context, title: 'Error', message: 'Could not pick images', type: FeedbackType.error);
+      }
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _selectedImages.removeAt(index);
+    });
+  }
+
+  @override
   void dispose() {
     _descriptionController.dispose();
     _customSkillController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -57,12 +173,22 @@ class _PostJobScreenState extends State<PostJobScreen> {
       CustomFeedbackPopup.show(context, title: 'Missing Info', message: 'Please describe your problem', type: FeedbackType.error);
       return;
     }
+    
+    // Ensure we have location
+    if (_currentPosition == null) {
+       // Try fetching again or warn
+       await _getCurrentLocation();
+       if (_currentPosition == null) {
+          if (!mounted) return;
+           CustomFeedbackPopup.show(context, title: 'Location Error', message: 'We need your location to find valid workers nearby.', type: FeedbackType.error);
+           return;
+       }
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // In a real app, we would get proper Title from user or generate it better
-      final String jobTitle = '${_urgency == 'Emergency' ? 'URGENT: ' : ''}Need $finalSkill Help';
+      final String jobTitle = '${_urgency == 'emergency' ? 'URGENT: ' : ''}Need $finalSkill Help';
 
       final result = await JobService.createJob(
         title: jobTitle,
@@ -70,9 +196,10 @@ class _PostJobScreenState extends State<PostJobScreen> {
         skill: finalSkill, 
         urgency: _urgency,
         quotationWindowDays: _quotationWindowDays,
+        materialRequired: _materialRequired,
         location: {
-          'coordinates': [72.8777, 19.0760], // Hardcoded Mumbai for DEMO as requested "Start simple"
-          'address': 'Demo Location (Mumbai)'
+          'coordinates': [_currentPosition!.longitude, _currentPosition!.latitude],
+          'address': _currentAddress ?? 'Unknown Location'
         },
       );
 
@@ -91,7 +218,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
                _descriptionController.clear();
                _customSkillController.clear();
                _selectedSkill = null;
-               _urgency = 'Normal';
+               _urgency = 'medium';
              });
            }
          );
@@ -123,6 +250,17 @@ class _PostJobScreenState extends State<PostJobScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                   // Address / Location Status Header (Optional visual feedback)
+                   if (_isLocationLoading)
+                     Padding(
+                       padding: const EdgeInsets.only(bottom: 20),
+                       child: LinearProgressIndicator(
+                         backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
+                         valueColor: AlwaysStoppedAnimation<Color>(AppTheme.colors.primary),
+                         borderRadius: BorderRadius.circular(2),
+                       ),
+                     ),
+
                   _buildSectionLabel('SELECT SERVICE'),
                   const SizedBox(height: 12),
                   _buildServiceGrid(),
@@ -137,7 +275,14 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   _buildSectionLabel('DESCRIBE YOUR PROBLEM'),
                   const SizedBox(height: 12),
                   _buildDescriptionField(),
-                  
+
+                  const SizedBox(height: 28),
+
+                  // Photos of the Issue
+                  _buildSectionLabel('PHOTOS OF THE ISSUE'),
+                  const SizedBox(height: 12),
+                  _buildImageUploadSection(),
+
                   const SizedBox(height: 28),
                   
                   // Urgency Level
@@ -166,10 +311,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   // Additional Options
                   _buildMaterialToggle(),
                   
-                  const SizedBox(height: 32),
-                  
-                  // AI Suggestions Card
-                  _buildSuggestionsCard(),
                   
                   const SizedBox(height: 32),
                   
@@ -368,8 +509,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
             label: 'Normal',
             subtitle: 'Within 24 hours',
             icon: Icons.schedule_rounded,
-            isSelected: _urgency == 'Normal',
-            onTap: () => setState(() => _urgency = 'Normal'),
+            isSelected: _urgency == 'medium',
+            onTap: () => setState(() => _urgency = 'medium'),
           ),
         ),
         const SizedBox(width: 12),
@@ -378,8 +519,8 @@ class _PostJobScreenState extends State<PostJobScreen> {
             label: 'Emergency',
             subtitle: 'ASAP',
             icon: Icons.bolt_rounded,
-            isSelected: _urgency == 'Emergency',
-            onTap: () => setState(() => _urgency = 'Emergency'),
+            isSelected: _urgency == 'emergency',
+            onTap: () => setState(() => _urgency = 'emergency'),
             isEmergency: true,
           ),
         ),
@@ -455,109 +596,112 @@ class _PostJobScreenState extends State<PostJobScreen> {
   }
 
   Widget _buildLocationCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Map Preview
-          Container(
-            height: 140,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              color: Colors.grey[100],
-              image: const DecorationImage(
-                image: NetworkImage(
-                  'https://static-maps.yandex.ru/1.x/?ll=72.8777,19.0760&z=14&l=map&size=500,140',
-                ),
-                fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: _getCurrentLocation, // Tap to refresh
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Map Preview with FlutterMap
+            SizedBox(
+              height: 200,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: _isLocationLoading && _currentPosition == null
+                    ? Center(child: CircularProgressIndicator(color: AppTheme.colors.primary))
+                    : FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _currentPosition != null
+                              ? lat_lng.LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+                              : const lat_lng.LatLng(19.0760, 72.8777), // Default to Mumbai
+                          initialZoom: 15.0,
+                          interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.example.skillbridge_mobile',
+                          ),
+                          if (_currentPosition != null)
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: lat_lng.LatLng(
+                                    _currentPosition!.latitude, 
+                                    _currentPosition!.longitude
+                                  ),
+                                  width: 50,
+                                  height: 50,
+                                  child: Icon(
+                                    Icons.location_on,
+                                    color: AppTheme.colors.primary,
+                                    size: 40,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
               ),
             ),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x1A000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
+            
+            // Address Info
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.colors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.my_location_rounded,
-                  color: AppTheme.colors.primary,
-                  size: 24,
-                ),
+                    child: Icon(Icons.my_location_rounded, color: AppTheme.colors.primary, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Service Location',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          _currentAddress ?? 'Detecting...',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1F2937),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          
-          // Address Info
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.location_on_rounded, color: Colors.red, size: 18),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Using Demo Location',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Mumbai, India (Test Mode)',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // TextButton(
-                //   onPressed: () {},
-                //   child: const Text(
-                //     'Change',
-                //     style: TextStyle(
-                //       fontSize: 13,
-                //       fontWeight: FontWeight.w800,
-                //     ),
-                //   ),
-                // ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -626,104 +770,6 @@ class _PostJobScreenState extends State<PostJobScreen> {
     );
   }
 
-  Widget _buildSuggestionsCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.colors.primary.withValues(alpha: 0.05),
-            AppTheme.colors.secondary.withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.colors.primary.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  color: AppTheme.colors.primary,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'AI Suggestions',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildSuggestionRow(
-            icon: Icons.payments_outlined,
-            label: 'Estimated Cost',
-            value: '₹400 - ₹650',
-          ),
-          const SizedBox(height: 12),
-          _buildSuggestionRow(
-            icon: Icons.timer_outlined,
-            label: 'Expected Response',
-            value: 'Within 15 mins',
-          ),
-          const SizedBox(height: 12),
-          _buildSuggestionRow(
-            icon: Icons.people_outline_rounded,
-            label: 'Available Workers',
-            value: 'Searching...',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuggestionRow({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey[600]),
-        const SizedBox(width: 10),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF6B7280),
-          ),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
-            color: AppTheme.colors.primary,
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSubmitButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
@@ -757,6 +803,85 @@ class _PostJobScreenState extends State<PostJobScreen> {
           ],
         ),
       ),
+    );
+  }
+  Widget _buildImageUploadSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_selectedImages.isNotEmpty)
+          Container(
+            height: 100,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _selectedImages.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        _selectedImages[index],
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      top: -8,
+                      right: -8,
+                      child: GestureDetector(
+                        onTap: () => _removeImage(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        
+        InkWell(
+          onTap: _pickImages,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppTheme.colors.primary,
+                style: BorderStyle.solid,
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.add_a_photo_rounded, color: AppTheme.colors.primary, size: 28),
+                const SizedBox(height: 8),
+                Text(
+                  'Add Photos',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.colors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
