@@ -196,7 +196,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
         skill: finalSkill, 
         urgency: _urgency,
         quotationWindowDays: _quotationWindowDays,
-
+        images: _selectedImages,
         location: {
           'coordinates': [_currentPosition!.longitude, _currentPosition!.latitude],
           'address': _currentAddress ?? 'Unknown Location'
@@ -217,6 +217,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
              setState(() {
                _descriptionController.clear();
                _customSkillController.clear();
+               _selectedImages.clear();
                _selectedSkill = null;
                _urgency = 'medium';
              });

@@ -232,7 +232,7 @@ class _JobListState extends State<JobList> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-             Navigator.pushNamed(context, '/job-detail', arguments: job['_id']);
+             Navigator.pushNamed(context, '/worker-job-detail', arguments: job['_id']);
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -301,7 +301,7 @@ class _JobListState extends State<JobList> {
                    width: double.infinity,
                    child: OutlinedButton(
                      onPressed: () {
-                        Navigator.pushNamed(context, '/job-detail', arguments: job['_id']);
+                        Navigator.pushNamed(context, '/worker-job-detail', arguments: job['_id']);
                      },
                      style: OutlinedButton.styleFrom(
                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

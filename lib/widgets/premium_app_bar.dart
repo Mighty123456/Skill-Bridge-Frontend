@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/features/auth/data/auth_service.dart';
+import 'package:skillbridge_mobile/features/tenant/presentation/pages/tenant_notifications_screen.dart';
+import 'package:skillbridge_mobile/features/worker/presentation/pages/worker_notifications_screen.dart';
+import 'package:skillbridge_mobile/features/chat/presentation/pages/chat_list_screen.dart';
 
 class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
@@ -72,13 +76,13 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
                 _buildActionIcon(
                   icon: Icons.notifications_none_rounded,
                   hasBadge: true,
-                  onTap: onNotificationTap ?? () => _showComingSoon(context, 'Notifications'),
+                  onTap: onNotificationTap ?? () => _navigateByRole(context, 'notifications'),
                 ),
                 const SizedBox(width: 8),
                 _buildActionIcon(
                   icon: Icons.chat_bubble_outline_rounded,
                   hasBadge: false,
-                  onTap: onChatTap ?? () => _showComingSoon(context, 'Messages'),
+                  onTap: onChatTap ?? () => _navigateByRole(context, 'chat'),
                 ),
               ],
             ],
@@ -86,6 +90,30 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _navigateByRole(BuildContext context, String destination) async {
+    final result = await AuthService().getMe();
+    if (!context.mounted) return;
+
+    if (result['success']) {
+      final user = result['data']['user'];
+      final role = user['role'];
+
+      if (destination == 'notifications') {
+        if (role == 'worker') {
+          Navigator.pushNamed(context, WorkerNotificationsScreen.routeName);
+        } else {
+          Navigator.pushNamed(context, TenantNotificationsScreen.routeName);
+        }
+      } else if (destination == 'chat') {
+         Navigator.pushNamed(context, ChatListScreen.routeName);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to view notifications.'))
+      );
+    }
   }
 
   Widget _buildTextLogo() {
@@ -143,20 +171,6 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppTheme.colors.primary,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
       ),
     );
   }

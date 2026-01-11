@@ -3,81 +3,158 @@ import '../../../../shared/themes/app_theme.dart';
 import '../widgets/status_timeline.dart';
 import 'quotation_comparison_screen.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
+import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
+import 'package:skillbridge_mobile/features/worker/data/job_execution_service.dart';
 
-class JobDetailScreen extends StatelessWidget {
-  static const String routeName = '/job-detail';
-  const JobDetailScreen({super.key});
+import 'package:skillbridge_mobile/features/tenant/data/tenant_job_service.dart';
+import '../../../chat/presentation/pages/chat_screen.dart';
+
+class JobDetailScreen extends StatefulWidget {
+  static const String routeName = '/tenant-job-detail';
+  final String? jobId;
+  final Map<String, dynamic>? jobData;
+
+  const JobDetailScreen({super.key, this.jobId, this.jobData});
+
+  @override
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
+}
+
+class _JobDetailScreenState extends State<JobDetailScreen> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _job;
+  String? _errorMessage;
+  bool _isConfirming = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    if (widget.jobData != null) {
+      setState(() {
+        _job = widget.jobData;
+        _isLoading = false;
+      });
+    } else if (widget.jobId != null) {
+      _loadJobDetails();
+    } else {
+      setState(() {
+        _errorMessage = "Job Information Missing";
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadJobDetails() async {
+    setState(() => _isLoading = true);
+    final result = await TenantJobService.getJobDetails(widget.jobId!);
+    if (mounted) {
+      setState(() {
+        if (result['success']) {
+          _job = result['data'];
+        } else {
+          _errorMessage = result['message'];
+        }
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_errorMessage != null || _job == null) {
+      return Scaffold(
+        appBar: const PremiumAppBar(title: 'Error', showBackButton: true),
+        body: Center(child: Text(_errorMessage ?? 'Job not found')),
+      );
+    }
+
+    final String title = _job!['job_title'] ?? 'Untitled';
+    final String description = _job!['job_description'] ?? 'No description provided.';
+    final String address = _job!['location']?['address_text'] ?? 'Unknown Location';
+    final String status = _job!['status'] ?? 'open';
+    final String urgency = _job!['urgency_level'] ?? 'normal';
+    final List<String> photos = (_job!['issue_photos'] as List?)?.whereType<String>().toList() ?? [];
+    final worker = _job!['selected_worker_id'];
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: PremiumAppBar(
+        title: 'Job Details',
         showBackButton: true,
         actions: [
-          TextButton(
-            onPressed: () {},
-            child: const Text('Cancel', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
+          if (status == 'open')
+            TextButton(
+              onPressed: () {},
+              child: const Text('Cancel', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Professional Page Header
+            // Professional Page Header - Dynamic Status Bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: AppTheme.colors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                'JOB DETAILS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.colors.primary,
-                  letterSpacing: 1.5,
+                color: (status == 'completed' ? Colors.green : (status == 'open' ? AppTheme.colors.primary : Colors.orange)).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: (status == 'completed' ? Colors.green : (status == 'open' ? AppTheme.colors.primary : Colors.orange)).withValues(alpha: 0.2),
                 ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    status == 'completed' ? Icons.check_circle_outline : (status == 'open' ? Icons.campaign_outlined : Icons.engineering_outlined),
+                    size: 14,
+                    color: status == 'completed' ? Colors.green : (status == 'open' ? AppTheme.colors.primary : Colors.orange),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    status == 'open' ? 'OPEN FOR QUOTATIONS' : (status == 'completed' ? 'JOB COMPLETED' : 'WORK IN PROGRESS'),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: status == 'completed' ? Colors.green : (status == 'open' ? AppTheme.colors.primary : Colors.orange),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
+            
             // Status Timeline
-            const StatusTimeline(currentStatus: 'Open'),
+            StatusTimeline(currentStatus: status.toUpperCase().replaceAll('_', ' ')),
             const SizedBox(height: 32),
 
             // Job Title and Info
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Kitchen Sink Leakage',
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
-                    const Text('Plumbing • Posted 5m ago', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.colors.jobCardSecondary,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.timer_outlined, size: 16, color: AppTheme.colors.primary),
-                      const SizedBox(width: 4),
                       Text(
-                        '02:54:12',
-                        style: TextStyle(
-                          color: AppTheme.colors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        title,
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_job!['skill_required']?.toUpperCase() ?? 'GENERAL'} • Posted ${_formatTimeAgo(_job!['created_at'])}', 
+                        style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500, fontSize: 13)
                       ),
                     ],
                   ),
@@ -86,110 +163,328 @@ class JobDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Descriptions etc
+            // Job Description
             const Text(
-              'Description',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              'Job Description',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.2),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'The main pipe under the kitchen sink is leaking continuously. Need someone to fix it immediately. I have the basic tools but might need replacement washers.',
-              style: TextStyle(color: Colors.black87, height: 1.5),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              style: TextStyle(color: Colors.grey[800], height: 1.6, fontSize: 15, fontWeight: FontWeight.w400),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
+
+            // Photos Section (Moved below description)
+            if (photos.isNotEmpty) ...[
+              const Text(
+                'Issue Photos',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.2),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 160,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: photos.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) => GestureDetector(
+                    onTap: () => _showFullScreenImage(context, photos[index]),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        photos[index],
+                        width: 240,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 240,
+                          color: Colors.grey[100],
+                          child: const Icon(Icons.broken_image_outlined),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
 
             // Details card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.grey[50],
+                border: Border.all(color: Colors.grey[200]!),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: [
-                  _buildDetailRow(Icons.location_on_outlined, 'Location', '123, Maple Street, City'),
-                  const Divider(height: 24),
-                  _buildDetailRow(Icons.inventory_2_outlined, 'Material Required', 'Yes'),
-                  const Divider(height: 24),
-                  _buildDetailRow(Icons.bolt_outlined, 'Urgency', 'Normal'),
+                  _buildDetailRow(Icons.location_on_outlined, 'Location', address),
+                  const Divider(height: 32),
+                  _buildDetailRow(Icons.bolt_outlined, 'Urgency', urgency.toUpperCase()),
+                  const Divider(height: 32),
+                  _buildDetailRow(Icons.event_note_outlined, 'Status', status.toUpperCase().replaceAll('_', ' ')),
                 ],
               ),
             ),
             const SizedBox(height: 32),
 
-            // Workers Applied Count
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Quotations Received',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.colors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    '3 New',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Preview of first worker or generic CTA
-            InkWell(
-              onTap: () => Navigator.pushNamed(context, QuotationComparisonScreen.routeName),
-              child: Container(
+            // Worker Assigned Section
+            if (worker != null) ...[
+              const Text(
+                'Assigned Professional',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.2),
+              ),
+              const SizedBox(height: 16),
+              Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.colors.primary.withValues(alpha: 0.1)),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
                   ],
                 ),
                 child: Row(
                   children: [
-                    const Stack(
-                      children: [
-                        CircleAvatar(backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=1')),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: CircleAvatar(
-                            radius: 6,
-                            backgroundColor: Colors.green,
-                          ),
-                        ),
-                      ],
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
+                      backgroundImage: worker['profileImage'] != null ? NetworkImage(worker['profileImage']) : null,
+                      child: worker['profileImage'] == null 
+                        ? Text(worker['name']?[0] ?? 'W', style: TextStyle(color: AppTheme.colors.primary, fontWeight: FontWeight.bold))
+                        : null,
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
+                    const SizedBox(width: 16),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Ramesh Kumar', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('₹450 • 200+ jobs completed', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(worker['name'] ?? 'Professional', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                          const SizedBox(height: 2),
+                          Text('Contact: ${worker['phone'] ?? 'N/A'}', style: TextStyle(fontSize: 13, color: Colors.grey[600])),
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => Navigator.pushNamed(context, QuotationComparisonScreen.routeName),
-                child: const Text('Compare All Quotations'),
-              ),
-            ),
+                     IconButton(
+                       icon: const Icon(Icons.phone_rounded, color: Colors.green),
+                       onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Calling ${worker['name'] ?? 'Professional'}...'))
+                          );
+                       },
+                     ),
+                   ],
+                 ),
+               ),
+               
+               // Completion Review Section for Tenant
+               if (status == 'reviewing') ...[
+                 const SizedBox(height: 32),
+                 const Text(
+                   'Review Completion Proof',
+                   style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.2),
+                 ),
+                 const SizedBox(height: 16),
+                 Container(
+                   padding: const EdgeInsets.all(20),
+                   decoration: BoxDecoration(
+                     color: Colors.green.withValues(alpha: 0.05),
+                     borderRadius: BorderRadius.circular(24),
+                     border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
+                   ),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       const Row(
+                         children: [
+                           Icon(Icons.verified, color: Colors.green),
+                           SizedBox(width: 8),
+                           Text('Worker has finished!', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                         ],
+                       ),
+                       const SizedBox(height: 16),
+                       Text(
+                         'Please review the work proof photos below and confirm if the work is satisfactory.',
+                         style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                       ),
+                       const SizedBox(height: 20),
+                       
+                       // Completion Photos
+                       if ((_job!['completion_photos'] as List?)?.isNotEmpty ?? false)
+                        SizedBox(
+                          height: 120,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: (_job!['completion_photos'] as List).length,
+                            separatorBuilder: (context, index) => const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final url = _job!['completion_photos'][index];
+                              return GestureDetector(
+                                onTap: () => _showFullScreenImage(context, url),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(url, width: 120, height: 120, fit: BoxFit.cover),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                       
+                       const SizedBox(height: 24),
+                       Row(
+                         children: [
+                           Expanded(
+                             child: OutlinedButton.icon(
+                               onPressed: () {
+                                 Navigator.pushNamed(
+                                   context,
+                                   ChatScreen.routeName,
+                                   arguments: {
+                                     'jobId': _job!['_id'],
+                                     'recipientName': worker['name'] ?? 'Worker',
+                                   },
+                                 );
+                               },
+                               icon: const Icon(Icons.chat_bubble_outline),
+                               label: const Text('MESSAGE'),
+                               style: OutlinedButton.styleFrom(
+                                 padding: const EdgeInsets.symmetric(vertical: 16),
+                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                               ),
+                             ),
+                           ),
+                           const SizedBox(width: 8),
+                           Expanded(
+                             child: OutlinedButton(
+                               onPressed: () {
+                                 ScaffoldMessenger.of(context).showSnackBar(
+                                   const SnackBar(content: Text('Dispute system coming soon!'))
+                                 );
+                               },
+                               style: OutlinedButton.styleFrom(
+                                 padding: const EdgeInsets.symmetric(vertical: 16),
+                                 side: const BorderSide(color: Colors.red),
+                                 foregroundColor: Colors.red,
+                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                               ),
+                               child: const Text('DISPUTE'),
+                             ),
+                           ),
+                           const SizedBox(width: 8),
+                           Expanded(
+                             flex: 2,
+                             child: ElevatedButton(
+                               onPressed: _isConfirming ? null : _confirmCompletion,
+                               style: ElevatedButton.styleFrom(
+                                 backgroundColor: Colors.green,
+                                 foregroundColor: Colors.white,
+                                 padding: const EdgeInsets.symmetric(vertical: 16),
+                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                               ),
+                               child: _isConfirming 
+                                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                 : const Text('CONFIRM', style: TextStyle(fontWeight: FontWeight.bold)),
+                             ),
+                           ),
+                         ],
+                       ),
+                     ],
+                   ),
+                 ),
+               ],
+               
+               // Completed State UI
+               if (status == 'completed') ...[
+                 const SizedBox(height: 32),
+                 Container(
+                   padding: const EdgeInsets.all(24),
+                   decoration: BoxDecoration(
+                     color: Colors.blue.withValues(alpha: 0.05),
+                     borderRadius: BorderRadius.circular(28),
+                     border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
+                   ),
+                   child: Column(
+                     children: [
+                       const Icon(Icons.stars_rounded, color: Colors.blue, size: 48),
+                       const SizedBox(height: 16),
+                       const Text(
+                         'Job Successfully Completed!',
+                         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                       ),
+                       const SizedBox(height: 8),
+                       Text(
+                         'This job was finished on ${_formatDate(_job!['updated_at'])}',
+                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                       ),
+                       
+                       if ((_job!['completion_photos'] as List?)?.isNotEmpty ?? false) ...[
+                         const SizedBox(height: 24),
+                         const Align(
+                           alignment: Alignment.centerLeft,
+                           child: Text('Work Proof Gallery', style: TextStyle(fontWeight: FontWeight.bold)),
+                         ),
+                         const SizedBox(height: 12),
+                         SizedBox(
+                           height: 100,
+                           child: ListView.separated(
+                             scrollDirection: Axis.horizontal,
+                             itemCount: (_job!['completion_photos'] as List).length,
+                             separatorBuilder: (context, index) => const SizedBox(width: 10),
+                             itemBuilder: (context, index) {
+                               final url = _job!['completion_photos'][index];
+                               return GestureDetector(
+                                 onTap: () => _showFullScreenImage(context, url),
+                                 child: ClipRRect(
+                                   borderRadius: BorderRadius.circular(12),
+                                   child: Image.network(url, width: 100, height: 100, fit: BoxFit.cover),
+                                 ),
+                               );
+                             },
+                           ),
+                         ),
+                       ],
+                       
+                       const SizedBox(height: 24),
+                       OutlinedButton(
+                         onPressed: () {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Review system coming soon!'))
+                           );
+                         },
+                         style: OutlinedButton.styleFrom(
+                           minimumSize: const Size(double.infinity, 50),
+                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                         ),
+                         child: const Text('WRITE A WORKER REVIEW'),
+                       ),
+                     ],
+                   ),
+                 ),
+               ],
+             ] else if (status == 'open') ...[
+               const SizedBox(height: 12),
+               SizedBox(
+                 width: double.infinity,
+                 child: ElevatedButton(
+                   onPressed: () => Navigator.pushNamed(
+                     context, 
+                     QuotationComparisonScreen.routeName,
+                     arguments: _job,
+                   ),
+                   style: ElevatedButton.styleFrom(
+                     backgroundColor: AppTheme.colors.primary,
+                     foregroundColor: Colors.white,
+                     padding: const EdgeInsets.symmetric(vertical: 18),
+                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                     elevation: 0,
+                   ),
+                   child: const Text('VIEW QUOTATIONS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                 ),
+               ),
+            ],
             const SizedBox(height: 40),
           ],
         ),
@@ -200,12 +495,106 @@ class JobDetailScreen extends StatelessWidget {
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: AppTheme.colors.primary),
+        ),
         const SizedBox(width: 12),
-        Text(label, style: const TextStyle(color: Colors.grey)),
+        Text(label, style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500)),
         const Spacer(),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Expanded(
+          flex: 2,
+          child: Text(
+            value, 
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
+  }
+
+  String _formatTimeAgo(String? dateStr) {
+    if (dateStr == null) return '';
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return '';
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    return '${difference.inDays}d ago';
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmCompletion() async {
+    setState(() => _isConfirming = true);
+    
+    final result = await JobExecutionService.confirmCompletion(widget.jobId ?? _job!['_id']);
+
+    if (mounted) {
+      setState(() => _isConfirming = false);
+      if (result['success']) {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Job Completed!',
+          message: 'The job has been closed. Thank you for using SkillBridge.',
+          type: FeedbackType.success,
+          onConfirm: () {
+            _loadJobDetails();
+          },
+        );
+      } else {
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Error',
+          message: result['message'] ?? 'Failed to confirm completion',
+          type: FeedbackType.error,
+        );
+      }
+    }
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return 'recently';
+    final date = DateTime.tryParse(dateStr);
+    if (date == null) return 'recently';
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

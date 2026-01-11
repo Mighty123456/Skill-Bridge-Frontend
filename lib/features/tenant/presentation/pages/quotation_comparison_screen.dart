@@ -3,11 +3,14 @@ import '../widgets/quotation_card.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import 'package:skillbridge_mobile/features/tenant/data/quotation_service.dart';
+import 'package:skillbridge_mobile/features/tenant/data/tenant_job_service.dart';
 import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
+import '../../../chat/presentation/pages/chat_screen.dart';
 
 class QuotationComparisonScreen extends StatefulWidget {
   static const String routeName = '/quotation-comparison';
-  const QuotationComparisonScreen({super.key});
+  final Map<String, dynamic>? jobData;
+  const QuotationComparisonScreen({super.key, this.jobData});
 
   @override
   State<QuotationComparisonScreen> createState() => _QuotationComparisonScreenState();
@@ -21,18 +24,14 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
   Map<String, dynamic>? _jobData;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_jobData == null) {
-      _jobData = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (_jobData != null) {
-        _fetchQuotations();
-      } else {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Job information missing';
-        });
-      }
+  void initState() {
+    super.initState();
+    _jobData = widget.jobData;
+    if (_jobData != null) {
+      _fetchQuotations();
+    } else {
+      _isLoading = false;
+      _errorMessage = 'Job information missing';
     }
   }
 
@@ -45,6 +44,15 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
     });
 
     try {
+      // 1. If job data is thin (e.g. from notification), fetch full details
+      if (_jobData!['job_title'] == null) {
+        final jobResponse = await TenantJobService.getJobDetails(_jobData!['_id']);
+        if (jobResponse['success']) {
+          _jobData = jobResponse['data'];
+        }
+      }
+
+      // 2. Fetch Quotations
       final response = await _quotationService.getQuotations(_jobData!['_id']);
       if (response['success']) {
         setState(() {
@@ -91,40 +99,33 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
       final response = await _quotationService.acceptQuotation(quotationId);
       if (response['success']) {
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => CustomFeedbackPopup(
-              title: 'Success!',
-              message: 'Quotation accepted. The worker has been notified.',
-              type: FeedbackType.success,
-              onConfirm: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context, true); // Return with success
-              },
-            ),
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Success!',
+            message: 'Quotation accepted. The worker has been notified.',
+            type: FeedbackType.success,
+            onConfirm: () {
+              Navigator.pop(context, true); // Return with success
+            },
           );
         }
       } else {
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => CustomFeedbackPopup(
-              title: 'Error',
-              message: response['message'] ?? 'Failed to accept quotation.',
-              type: FeedbackType.error,
-            ),
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Error',
+            message: response['message'] ?? 'Failed to accept quotation.',
+            type: FeedbackType.error,
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => CustomFeedbackPopup(
-            title: 'Error',
-            message: 'An error occurred: $e',
-            type: FeedbackType.error,
-          ),
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Error',
+          message: 'An error occurred: $e',
+          type: FeedbackType.error,
         );
       }
     } finally {
@@ -150,9 +151,67 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
               ? _buildErrorState()
-              : _quotations.isEmpty
-                  ? _buildEmptyState()
-                  : _buildQuotationsList(),
+              : Column(
+                  children: [
+                    if (_jobData != null && _jobData!['job_title'] != null)
+                      _buildJobHeader(),
+                    Expanded(
+                      child: _quotations.isEmpty
+                          ? _buildEmptyState()
+                          : _buildQuotationsList(),
+                    ),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildJobHeader() {
+    final photos = _jobData!['issue_photos'] as List? ?? [];
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           Text(
+             _jobData!['job_title'] ?? 'Job Details',
+             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+           ),
+           const SizedBox(height: 8),
+           Text(
+             _jobData!['job_description'] ?? '',
+             maxLines: 2,
+             overflow: TextOverflow.ellipsis,
+             style: TextStyle(color: Colors.grey[600], fontSize: 13),
+           ),
+           if (photos.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: photos.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) => ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      photos[index],
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+           ],
+           const Divider(height: 24),
+           const Text(
+             'PROPOSALS RECEIVED',
+             style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey, letterSpacing: 1.0),
+           ),
+        ],
+      ),
     );
   }
 
@@ -208,9 +267,21 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
           estimatedTime: '${q['estimated_days']} Days',
           isTopRated: index == 0, // Mark first one as top rated (e.g. cheapest)
           badges: ['Verified'],
-          imageUrl: 'https://i.pravatar.cc/150?u=${worker['_id']}',
+          imageUrl: worker['profileImage'] ?? 'https://i.pravatar.cc/150?u=${worker['_id']}',
           notes: q['notes'],
-          onSelected: () => _onAcceptQuotation(q['_id']),
+          onSelected: (_jobData != null && _jobData!['status'] == 'open') 
+              ? () => _onAcceptQuotation(q['_id'])
+              : null, // Disable selection if job is not open
+          onChat: () {
+            Navigator.pushNamed(
+              context,
+              ChatScreen.routeName,
+              arguments: {
+                'jobId': _jobData!['_id'],
+                'recipientName': worker['name'] ?? 'Worker',
+              },
+            );
+          },
         );
       },
     );

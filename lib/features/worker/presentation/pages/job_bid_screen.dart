@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
 import 'package:skillbridge_mobile/features/tenant/data/quotation_service.dart';
 import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
+import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 
 class JobBidScreen extends StatefulWidget {
   static const String routeName = '/job-bid';
@@ -34,7 +35,7 @@ class _JobBidScreenState extends State<JobBidScreen> {
   void _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final job = widget.jobData ?? ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final job = widget.jobData;
     if (job == null) return;
 
     setState(() => _isLoading = true);
@@ -50,40 +51,33 @@ class _JobBidScreenState extends State<JobBidScreen> {
 
       if (response['success']) {
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => CustomFeedbackPopup(
-              title: 'Success!',
-              message: 'Your quotation has been submitted successfully.',
-              type: FeedbackType.success,
-              onConfirm: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context, true); // Return to previous screen
-              },
-            ),
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Success!',
+            message: 'Your quotation has been submitted successfully.',
+            type: FeedbackType.success,
+            onConfirm: () {
+              Navigator.pop(context, true); // Return to previous screen
+            },
           );
         }
       } else {
         if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => CustomFeedbackPopup(
-              title: 'Submission Failed',
-              message: response['message'] ?? 'Could not submit quotation.',
-              type: FeedbackType.error,
-            ),
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Submission Failed',
+            message: response['message'] ?? 'Could not submit quotation.',
+            type: FeedbackType.error,
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => CustomFeedbackPopup(
-            title: 'Error',
-            message: 'An unexpected error occurred: $e',
-            type: FeedbackType.error,
-          ),
+        CustomFeedbackPopup.show(
+          context,
+          title: 'Error',
+          message: 'An unexpected error occurred: $e',
+          type: FeedbackType.error,
         );
       }
     } finally {
@@ -93,7 +87,7 @@ class _JobBidScreenState extends State<JobBidScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final job = widget.jobData ?? ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final job = widget.jobData;
     
     if (job == null) {
       return Scaffold(
@@ -108,11 +102,9 @@ class _JobBidScreenState extends State<JobBidScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.colors.background,
-      appBar: AppBar(
-        title: const Text('Submit Quotation'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+      appBar: const PremiumAppBar(
+        title: 'Submit Quotation',
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -161,6 +153,30 @@ class _JobBidScreenState extends State<JobBidScreen> {
                       job['job_description'] ?? 'No description provided',
                       style: const TextStyle(fontSize: 13, color: Colors.black87),
                     ),
+                    const SizedBox(height: 12),
+                    if (job['issue_photos'] != null && (job['issue_photos'] as List).whereType<String>().isNotEmpty) ...[
+                      const Text(
+                        'PHOTOS:',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 100,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: (job['issue_photos'] as List).length,
+                          separatorBuilder: (context, index) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) => ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              job['issue_photos'][index],
+                              width: 140,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -251,27 +267,59 @@ class _JobBidScreenState extends State<JobBidScreen> {
       final remaining = endTime.difference(DateTime.now());
       
       if (remaining.isNegative) {
-        return const Center(
-          child: Text(
-            'Quotation window closed',
-            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.red.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 20),
+              SizedBox(width: 12),
+              Text(
+                'This job is no longer accepting quotations.',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ],
           ),
         );
       }
 
       final hours = remaining.inHours;
       final minutes = remaining.inMinutes % 60;
+      final isUrgent = hours < 1;
+      final color = isUrgent ? Colors.red : Colors.orange;
 
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.info_outline, size: 14, color: Colors.orange),
-          const SizedBox(width: 4),
-          Text(
-            'Remaining time to bid: ${hours}h ${minutes}m', 
-            style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)
-          ),
-        ],
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(isUrgent ? Icons.timer_rounded : Icons.info_outline, size: 18, color: color),
+                const SizedBox(width: 8),
+                Text(
+                  'Time Remaining: ${hours}h ${minutes}m', 
+                  style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w900, letterSpacing: 0.5)
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              isUrgent ? 'Hurry! Window is closing soon.' : 'Submit your best quote before the deadline.',
+              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
       );
     } catch (e) {
       return const SizedBox.shrink();

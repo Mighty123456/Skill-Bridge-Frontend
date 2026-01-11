@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
-import '../../data/notification_service.dart';
+import '../../../worker/data/notification_service.dart';
+import 'quotation_comparison_screen.dart';
 
-
-class WorkerNotificationsScreen extends StatefulWidget {
-  static const String routeName = '/worker-notifications';
-  const WorkerNotificationsScreen({super.key});
+class TenantNotificationsScreen extends StatefulWidget {
+  static const String routeName = '/tenant-notifications';
+  const TenantNotificationsScreen({super.key});
 
   @override
-  State<WorkerNotificationsScreen> createState() => _WorkerNotificationsScreenState();
+  State<TenantNotificationsScreen> createState() => _TenantNotificationsScreenState();
 }
 
-class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
+class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
@@ -65,11 +65,6 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                     },
                   ),
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: AppTheme.colors.primary,
-        child: const Icon(Icons.support_agent_rounded, color: Colors.white),
-      ),
     );
   }
 
@@ -95,7 +90,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'All Caught Up!',
+            'No Notifications',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -104,7 +99,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'No new notifications at the moment.',
+            'We\'ll notify you when you receive a quotation.',
             style: TextStyle(color: Colors.grey[600]),
           ),
         ],
@@ -116,30 +111,21 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
     final type = notification['type'] ?? 'system';
     final isRead = notification['read'] == true;
     
-    // Determine style based on type
     IconData icon;
     Color color;
     
     switch (type) {
-      case 'job_alert':
-        icon = Icons.work_outline_rounded;
-        color = Colors.orange;
+      case 'quotation_received':
+        icon = Icons.assignment_outlined;
+        color = AppTheme.colors.primary;
         break;
       case 'payment':
-        icon = Icons.attach_money_rounded;
+        icon = Icons.payment_rounded;
         color = Colors.green;
-        break;
-      case 'job_update':
-        icon = Icons.update_rounded;
-        color = Colors.blue;
-        break;
-      case 'quotation_accepted':
-        icon = Icons.assignment_turned_in_rounded;
-        color = Colors.indigo;
         break;
       default:
         icon = Icons.notifications_none_rounded;
-        color = AppTheme.colors.primary;
+        color = Colors.blue;
     }
 
     return GestureDetector(
@@ -151,14 +137,16 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
           });
         }
          
-        // Navigate to detail if it's a job alert or quotation accepted
-        if ((type == 'job_alert' || type == 'quotation_accepted') && 
-            notification['data'] != null && notification['data']['jobId'] != null) {
-          // Navigate to details
+        if (type == 'quotation_received' && notification['data'] != null && notification['data']['jobId'] != null) {
+          // Navigate to Quotation Comparison Screen
+          // We need to pass the jobId or the whole jobData. 
+          // Since we only have jobId here, we might need a fetch or update the screen to support jobId only.
+          // For now, let's navigate to comparison with the ID. 
+          // Note: QuotationComparisonScreen expects Map<String, dynamic>? jobData (which has _id)
           Navigator.pushNamed(
             context, 
-            '/worker-job-detail', 
-            arguments: notification['data']['jobId']
+            QuotationComparisonScreen.routeName,
+            arguments: {'_id': notification['data']['jobId']}
           );
         }
       },
@@ -173,7 +161,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
           ),
           boxShadow: [
              BoxShadow(
-                color: Colors.black.withValues(alpha: isRead ? 0.03 : 0.0), // No shadow for unread to make it flat/highlighted
+                color: Colors.black.withValues(alpha: isRead ? 0.03 : 0.0),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -210,10 +198,7 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                          Container(
                            width: 8,
                            height: 8,
-                           decoration: BoxDecoration(
-                             color: color,
-                             shape: BoxShape.circle,
-                           ),
+                           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                          )
                      ],
                    ),
@@ -226,11 +211,6 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
                        height: 1.4
                      ),
                    ),
-                   const SizedBox(height: 8),
-                   Text(
-                     _formatTimeAgo(notification['createdAt']),
-                     style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                   ),
                  ],
                ),
              )
@@ -238,21 +218,5 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
         ),
       ),
     );
-  }
-
-  String _formatTimeAgo(String? dateStr) {
-    if (dateStr == null) return '';
-    final date = DateTime.tryParse(dateStr);
-    if (date == null) return '';
-    final now = DateTime.now();
-    final difference = now.difference(date);
-
-    if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
   }
 }

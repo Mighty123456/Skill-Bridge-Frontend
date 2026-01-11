@@ -70,95 +70,59 @@ class _TenantMainScreenState extends State<TenantMainScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, -5)),
           ],
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: BottomNavigationBar(
-              currentIndex: _currentIndex,
-              onTap: (index) => setState(() => _currentIndex = index),
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              selectedItemColor: AppTheme.colors.primary,
-              unselectedItemColor: Colors.grey[400],
-              selectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 10,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-              ),
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.home_outlined, size: 24),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.home_rounded, size: 26),
-                  ),
-                  label: 'Home',
-                ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.work_outline_rounded, size: 24),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.work_rounded, size: 26),
-                  ),
-                  label: 'My Jobs',
-                ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.add_circle_outline_rounded, size: 28),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.add_circle_rounded, size: 30),
-                  ),
-                  label: 'Post Job',
-                ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.receipt_long_outlined, size: 24),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.receipt_long_rounded, size: 26),
-                  ),
-                  label: 'History',
-                ),
-                BottomNavigationBarItem(
-                  icon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.person_outline_rounded, size: 24),
-                  ),
-                  activeIcon: Padding(
-                    padding: EdgeInsets.only(bottom: 4),
-                    child: Icon(Icons.person_rounded, size: 26),
-                  ),
-                  label: 'Profile',
-                ),
-              ],
-            ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            selectedItemColor: AppTheme.colors.primary,
+            unselectedItemColor: Colors.grey[400],
+            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+            showUnselectedLabels: true,
+            items: [
+              _buildNavItem(Icons.home_outlined, Icons.home_rounded, 'Home', 0),
+              _buildNavItem(Icons.work_outline_rounded, Icons.work_rounded, 'My Jobs', 1),
+              _buildNavItem(Icons.add_circle_outline_rounded, Icons.add_circle_rounded, 'Post Job', 2),
+              _buildNavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, 'History', 3),
+              _buildNavItem(Icons.person_outline_rounded, Icons.person_rounded, 'Profile', 4),
+            ],
           ),
         ),
       ),
       ),
+    );
+  }
+
+  BottomNavigationBarItem _buildNavItem(IconData icon, IconData activeIcon, String label, int index) {
+    return BottomNavigationBarItem(
+      icon: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+           color: _currentIndex == index ? AppTheme.colors.primary.withValues(alpha: 0.1) : Colors.transparent,
+           borderRadius: BorderRadius.circular(12)
+        ),
+        child: Icon(icon)
+      ),
+      activeIcon: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+           color: AppTheme.colors.primary.withValues(alpha: 0.1),
+           borderRadius: BorderRadius.circular(12)
+        ),
+        child: Icon(activeIcon)
+      ),
+      label: label,
     );
   }
 }

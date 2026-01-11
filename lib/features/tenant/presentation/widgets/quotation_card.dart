@@ -9,8 +9,9 @@ class QuotationCard extends StatelessWidget {
   final String estimatedTime;
   final bool isTopRated;
   final List<String> badges;
-  final String imageUrl;
+  final String? imageUrl;
   final VoidCallback? onSelected;
+  final VoidCallback? onChat;
   final String? notes;
 
   const QuotationCard({
@@ -22,8 +23,9 @@ class QuotationCard extends StatelessWidget {
     required this.estimatedTime,
     required this.isTopRated,
     required this.badges,
-    required this.imageUrl,
+    this.imageUrl,
     this.onSelected,
+    this.onChat,
     this.notes,
   });
 
@@ -67,7 +69,10 @@ class QuotationCard extends StatelessWidget {
                     CircleAvatar(
                       radius: 25, 
                       backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
-                      child: Text(workerName[0].toUpperCase(), style: TextStyle(color: AppTheme.colors.primary, fontWeight: FontWeight.bold)),
+                      backgroundImage: (imageUrl != null && imageUrl!.isNotEmpty) ? NetworkImage(imageUrl!) : null,
+                      child: (imageUrl == null || imageUrl!.isEmpty)
+                        ? Text(workerName[0].toUpperCase(), style: TextStyle(color: AppTheme.colors.primary, fontWeight: FontWeight.bold))
+                        : null,
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -113,16 +118,31 @@ class QuotationCard extends StatelessWidget {
                   children: [
                     _buildInfoItem(Icons.timer_outlined, 'Timeline', estimatedTime),
                     _buildInfoItem(Icons.verified_user_outlined, 'Guarantee', '7 Days'),
-                    ElevatedButton(
-                      onPressed: onSelected,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
-                        minimumSize: const Size(100, 40),
-                        backgroundColor: AppTheme.colors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('Select', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: onChat,
+                          icon: Icon(Icons.chat_bubble_outline, color: AppTheme.colors.primary),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: onSelected,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+                            minimumSize: const Size(100, 40),
+                            backgroundColor: AppTheme.colors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            onSelected != null ? 'Select' : 'Closed',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

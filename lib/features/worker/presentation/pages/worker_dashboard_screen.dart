@@ -66,6 +66,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
     return Scaffold(
       backgroundColor: AppTheme.colors.background,
       appBar: PremiumAppBar(
+        onNotificationTap: () {
+          Navigator.pushNamed(context, WorkerNotificationsScreen.routeName);
+        },
+        onChatTap: () {
+           // We could navigate to a main chat list here if it existed
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chat list coming soon!')));
+        },
         actions: [
           Row(
             children: [
@@ -77,12 +84,6 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> {
               ),
               const Text('Online ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green)),
             ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerNotificationsScreen()));
-            },
           ),
         ],
       ),

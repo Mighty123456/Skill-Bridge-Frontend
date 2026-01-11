@@ -11,8 +11,27 @@ class StatusTimeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> statuses = ['Open', 'Assigned', 'In Progress', 'Completed'];
-    final currentIndex = statuses.indexOf(currentStatus);
+    // Define the display labels
+    final List<String> statuses = ['Open', 'Assigned', 'In Progress', 'Reviewing', 'Completed'];
+    
+    // Map currentStatus to index (handling backend formats like 'in_progress' or 'OPEN')
+    int currentIndex = 0;
+    String normalized = currentStatus.toLowerCase().trim().replaceAll('_', ' ');
+    if (normalized.contains('completed')) {
+       currentIndex = 4;
+    } else if (normalized.contains('reviewing')) {
+       currentIndex = 3;
+    } else if (normalized.contains('in progress')) {
+       currentIndex = 2; // In Progress
+    } else if (normalized.contains('assigned')) {
+       currentIndex = 1;
+    } else if (normalized.contains('open')) {
+       currentIndex = 0;
+    } else {
+       // fallback matching
+       currentIndex = statuses.indexWhere((s) => s.toLowerCase() == normalized);
+       if (currentIndex == -1) currentIndex = 0;
+    }
 
     return Row(
       children: List.generate(statuses.length, (index) {
