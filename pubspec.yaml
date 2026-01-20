@@ -44,6 +44,8 @@ dependencies:
   characters: any
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
+  socket_io_client: ^3.1.4
+  encrypt: ^5.0.3
 
 dev_dependencies:
   flutter_test:

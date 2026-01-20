@@ -1,16 +1,21 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
 import 'package:skillbridge_mobile/features/auth/data/auth_service.dart';
 import 'package:skillbridge_mobile/features/tenant/presentation/pages/tenant_notifications_screen.dart';
 import 'package:skillbridge_mobile/features/worker/presentation/pages/worker_notifications_screen.dart';
 import 'package:skillbridge_mobile/features/chat/presentation/pages/chat_list_screen.dart';
+import 'package:skillbridge_mobile/features/worker/data/notification_service.dart';
 
-class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
+class PremiumAppBar extends StatefulWidget implements PreferredSizeWidget {
   final List<Widget>? actions;
   final bool showBackButton;
   final VoidCallback? onNotificationTap;
   final VoidCallback? onChatTap;
   final String? title;
+  final bool hideNotificationAction;
+  final bool hideChatAction;
+  final bool forceShowDefaultActions;
 
   const PremiumAppBar({
     super.key,
@@ -19,73 +24,136 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.onNotificationTap,
     this.onChatTap,
     this.title,
+    this.forceShowDefaultActions = false,
+    this.hideNotificationAction = false,
+    this.hideChatAction = false,
   });
 
   @override
   Size get preferredSize => const Size.fromHeight(70);
 
   @override
+  State<PremiumAppBar> createState() => _PremiumAppBarState();
+}
+
+class _PremiumAppBarState extends State<PremiumAppBar> {
+  // ... (existing state code)
+  bool _hasUnreadNotifications = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUnreadNotifications();
+  }
+
+  Future<void> _checkUnreadNotifications() async {
+    try {
+      final notifications = await NotificationService.getNotifications();
+      if (mounted) {
+        setState(() {
+          _hasUnreadNotifications = notifications.any((n) => n['read'] == false);
+        });
+      }
+    } catch (_) {
+      // Fail silently
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        bottom: false,
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          height: 70,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              // Logo or Title (never show back button)
-              if (title != null)
-                Text(
-                  title!,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF111827),
-                    letterSpacing: -0.5,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.9), // Glassy white
+            border: Border(bottom: BorderSide(color: Colors.grey.withValues(alpha: 0.1), width: 1.5)),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Container(
+              height: 70,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              alignment: Alignment.center,
+              child: Row(
+                children: [
+                   // Leading: Back Button or Logo
+                  if (widget.showBackButton)
+                    InkWell(
+                      onTap: () => Navigator.pop(context),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                        ),
+                        child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Colors.black87),
+                      ),
+                    )
+                  else
+                   Hero(
+                    tag: 'app_logo_main',
+                    child: Image.asset(
+                      'assets/logoSkillBridge.png',
+                      height: 48,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => _buildTextLogo(),
+                    ),
                   ),
-                )
-              else
-                Hero(
-                  tag: 'app_logo_main',
-                  child: Image.asset(
-                    'assets/logoSkillBridge.png',
-                    height: 45,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.high,
-                    errorBuilder: (context, error, stackTrace) => _buildTextLogo(),
+
+                  if (widget.showBackButton) const SizedBox(width: 16),
+                  
+                  // Title
+                  if (widget.title != null)
+                    Expanded(
+                      child: Text(
+                        widget.title!,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF111827),
+                          letterSpacing: -0.3,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  else
+                    const Spacer(),
+
+                  // Actions
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Custom Actions (if any)
+                      if (widget.actions != null) ...widget.actions!,
+
+                      // Default Actions (Notification & Chat)
+                      if (widget.actions == null || widget.forceShowDefaultActions) ...[
+                        if (!widget.hideNotificationAction) ...[
+                           const SizedBox(width: 8),
+                           _buildActionIcon(
+                             icon: Icons.notifications_none_rounded,
+                             hasBadge: _hasUnreadNotifications,
+                             onTap: widget.onNotificationTap ?? () => _navigateByRole(context, 'notifications'),
+                           ),
+                        ],
+                        
+                        if (!widget.hideChatAction) ...[
+                           const SizedBox(width: 12),
+                           _buildActionIcon(
+                             icon: Icons.chat_bubble_outline_rounded,
+                             hasBadge: false, 
+                             onTap: widget.onChatTap ?? () => _navigateByRole(context, 'chat'),
+                           ),
+                        ],
+                      ],
+                    ],
                   ),
-                ),
-              
-              const Spacer(),
-              
-              // Actions
-              if (actions != null) 
-                ...actions!
-              else ...[
-                _buildActionIcon(
-                  icon: Icons.notifications_none_rounded,
-                  hasBadge: true,
-                  onTap: onNotificationTap ?? () => _navigateByRole(context, 'notifications'),
-                ),
-                const SizedBox(width: 8),
-                _buildActionIcon(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  hasBadge: false,
-                  onTap: onChatTap ?? () => _navigateByRole(context, 'chat'),
-                ),
-              ],
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -102,12 +170,16 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
 
       if (destination == 'notifications') {
         if (role == 'worker') {
-          Navigator.pushNamed(context, WorkerNotificationsScreen.routeName);
+          await Navigator.pushNamed(context, WorkerNotificationsScreen.routeName);
         } else {
-          Navigator.pushNamed(context, TenantNotificationsScreen.routeName);
+          await Navigator.pushNamed(context, TenantNotificationsScreen.routeName);
         }
+        // Refresh unread status on return
+        _checkUnreadNotifications();
       } else if (destination == 'chat') {
-         Navigator.pushNamed(context, ChatListScreen.routeName);
+         await Navigator.pushNamed(context, ChatListScreen.routeName);
+         // Refresh unread status on return (if we add chat badge later)
+         _checkUnreadNotifications();
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -123,17 +195,19 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
           TextSpan(
             text: 'Skill',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: FontWeight.w900,
               color: AppTheme.colors.primary,
+              letterSpacing: -1,
             ),
           ),
           TextSpan(
             text: 'Bridge',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w500,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
               color: AppTheme.colors.secondary,
+              letterSpacing: -1,
             ),
           ),
         ],
@@ -150,22 +224,31 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(50),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+          boxShadow: [
+             BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2)),
+          ]
+        ),
         child: Stack(
-          clipBehavior: Clip.none,
+          alignment: Alignment.center,
           children: [
-            Icon(icon, color: const Color(0xFF374151), size: 26),
+            Icon(icon, color: Colors.grey[800], size: 22),
             if (hasBadge)
               Positioned(
-                right: 0,
-                top: 0,
+                right: 12,
+                top: 10,
                 child: Container(
-                  width: 9,
-                  height: 9,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
-                    color: AppTheme.colors.secondary,
+                    color: Colors.red,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
                 ),
               ),

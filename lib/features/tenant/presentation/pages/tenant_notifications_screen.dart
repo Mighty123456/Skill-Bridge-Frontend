@@ -14,6 +14,7 @@ class TenantNotificationsScreen extends StatefulWidget {
 class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -129,25 +130,26 @@ class _TenantNotificationsScreenState extends State<TenantNotificationsScreen> {
     }
 
     return GestureDetector(
-      onTap: () {
-        if (!isRead) {
-          NotificationService.markAsRead(notification['_id']);
-          setState(() {
-            notification['read'] = true;
-          });
-        }
-         
-        if (type == 'quotation_received' && notification['data'] != null && notification['data']['jobId'] != null) {
-          // Navigate to Quotation Comparison Screen
-          // We need to pass the jobId or the whole jobData. 
-          // Since we only have jobId here, we might need a fetch or update the screen to support jobId only.
-          // For now, let's navigate to comparison with the ID. 
-          // Note: QuotationComparisonScreen expects Map<String, dynamic>? jobData (which has _id)
-          Navigator.pushNamed(
-            context, 
-            QuotationComparisonScreen.routeName,
-            arguments: {'_id': notification['data']['jobId']}
-          );
+      onTap: () async {
+        if (_isNavigating) return;
+        _isNavigating = true;
+        try {
+          if (!isRead) {
+            NotificationService.markAsRead(notification['_id']);
+            setState(() {
+              notification['read'] = true;
+            });
+          }
+           
+          if (type == 'quotation_received' && notification['data'] != null && notification['data']['jobId'] != null) {
+            await Navigator.pushNamed(
+              context, 
+              QuotationComparisonScreen.routeName,
+              arguments: {'_id': notification['data']['jobId']}
+            );
+          }
+        } finally {
+          if (mounted) _isNavigating = false;
         }
       },
       child: Container(

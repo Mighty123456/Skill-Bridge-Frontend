@@ -279,6 +279,7 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
               arguments: {
                 'jobId': _jobData!['_id'],
                 'recipientName': worker['name'] ?? 'Worker',
+                'recipientId': worker['_id'],
               },
             );
           },

@@ -14,6 +14,7 @@ class WorkerNotificationsScreen extends StatefulWidget {
 class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -143,23 +144,29 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
     }
 
     return GestureDetector(
-      onTap: () {
-        if (!isRead) {
-          NotificationService.markAsRead(notification['_id']);
-          setState(() {
-            notification['read'] = true;
-          });
-        }
-         
-        // Navigate to detail if it's a job alert or quotation accepted
-        if ((type == 'job_alert' || type == 'quotation_accepted') && 
-            notification['data'] != null && notification['data']['jobId'] != null) {
-          // Navigate to details
-          Navigator.pushNamed(
-            context, 
-            '/worker-job-detail', 
-            arguments: notification['data']['jobId']
-          );
+      onTap: () async {
+        if (_isNavigating) return;
+        _isNavigating = true;
+        try {
+          if (!isRead) {
+            NotificationService.markAsRead(notification['_id']);
+            setState(() {
+              notification['read'] = true;
+            });
+          }
+           
+          // Navigate to detail if it's a job alert or quotation accepted
+          if ((type == 'job_alert' || type == 'quotation_accepted') && 
+              notification['data'] != null && notification['data']['jobId'] != null) {
+            // Navigate to details
+            await Navigator.pushNamed(
+              context, 
+              '/worker-job-detail', 
+              arguments: notification['data']['jobId']
+            );
+          }
+        } finally {
+          if (mounted) _isNavigating = false;
         }
       },
       child: Container(

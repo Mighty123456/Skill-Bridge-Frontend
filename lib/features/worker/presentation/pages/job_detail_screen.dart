@@ -71,8 +71,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final isAssignedToMe = _job!['selected_worker_id'] != null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const PremiumAppBar(title: 'Job Assignment', showBackButton: true),
+      backgroundColor: const Color(0xFFF5F7FA), // Light grey, consistent with dashboard
+      appBar: const PremiumAppBar(title: 'Job Details', showBackButton: true),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,70 +81,86 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             if (isAssignedToMe)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Colors.green[700]!, Colors.green[500]!],
+                    begin: Alignment.topLeft,
+                     end: Alignment.bottomRight,
                   ),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'CONGRATS! YOU ARE HIRED FOR THIS JOB',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5),
+                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 22),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'CONGRATS! YOU ARE HIRED FOR THIS JOB',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
+                      ),
                     ),
                   ],
                 ),
               ),
 
+            // Timeline
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: StatusTimeline(currentStatus: status),
             ),
 
-            Padding(
-              padding: const EdgeInsets.all(24),
+            // Job Title & Headings Card
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                   BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 4)),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: isEmergency ? Colors.red.withValues(alpha: 0.1) : AppTheme.colors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: (isEmergency ? Colors.red : AppTheme.colors.primary).withValues(alpha: 0.2)),
                         ),
                         child: Text(
                           isEmergency ? 'URGENT' : 'NEW OPPORTUNITY',
                           style: TextStyle(
                             fontSize: 10,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w800,
                             color: isEmergency ? Colors.red : AppTheme.colors.primary,
-                            letterSpacing: 1.0,
+                            letterSpacing: 0.8,
                           ),
                         ),
                       ),
                       Text(_formatTimeAgo(_job!['created_at']), style: TextStyle(color: Colors.grey[500], fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Text(
                     _job!['job_title'] ?? 'Job Details',
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5, height: 1.1),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87, height: 1.2),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 16, color: AppTheme.colors.primary),
+                      Icon(Icons.location_on_rounded, size: 18, color: AppTheme.colors.primary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           address,
-                          style: TextStyle(color: Colors.grey[700], fontSize: 15, fontWeight: FontWeight.w500),
+                          style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ],
@@ -155,32 +171,43 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
             // Description
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Job Description', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-                  const SizedBox(height: 12),
-                  Text(
-                    _job!['job_description'] ?? 'No description provided.',
-                    style: TextStyle(fontSize: 16, height: 1.6, color: Colors.grey[800], fontWeight: FontWeight.w400),
+                  const Text('JOB DESCRIPTION', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.grey, letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 2)),
+                      ]
+                    ),
+                    child: Text(
+                      _job!['job_description'] ?? 'No description provided.',
+                      style: TextStyle(fontSize: 15, height: 1.6, color: Colors.grey[800], fontWeight: FontWeight.w400),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Photos Gallery
             if (photos.isNotEmpty) ...[
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Text('Photos of the Issue', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text('ISSUE PHOTOS', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.grey, letterSpacing: 1.0)),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 180,
+                height: 140,
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
                   itemCount: photos.length,
@@ -188,49 +215,57 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   itemBuilder: (context, index) => GestureDetector(
                     onTap: () => _showFullScreenImage(context, photos[index]),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        photos[index],
-                        width: 280,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 280,
-                          color: Colors.grey[100],
-                          child: const Icon(Icons.broken_image_outlined),
-                        ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Stack(
+                         children: [
+                            Image.network(
+                              photos[index],
+                              width: 180, 
+                              height: 140,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: 180, height: 140,
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
+                              ),
+                            ),
+                            Container(width: 180, height: 140, color: Colors.black.withValues(alpha: 0.05)), // Subtle overlay
+                         ]
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
             ],
 
             // Customer Information
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Customer Information', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-                  const SizedBox(height: 16),
+                  const Text('CUSTOMER', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.grey, letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[50],
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.grey[200]!),
+                      boxShadow: [
+                         BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
                     ),
                     child: Row(
                       children: [
                         CircleAvatar(
-                          radius: 24,
+                          radius: 26,
                           backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
                           backgroundImage: postedBy['profileImage'] != null 
                             ? NetworkImage(postedBy['profileImage']) 
                             : null,
                           child: postedBy['profileImage'] == null 
-                            ? Text(postedBy['name']?[0] ?? 'U', style: TextStyle(color: AppTheme.colors.primary, fontWeight: FontWeight.bold))
+                            ? Text(postedBy['name']?[0] ?? 'U', style: TextStyle(color: AppTheme.colors.primary, fontWeight: FontWeight.bold, fontSize: 18))
                             : null,
                         ),
                         const SizedBox(width: 16),
@@ -238,19 +273,31 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(postedBy['name'] ?? 'Unknown User', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                              const SizedBox(height: 2),
-                              Text('Verified Customer • ${_job!['skill_required'] ?? 'Job'}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              Text(postedBy['name'] ?? 'Unknown User', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.verified_rounded, size: 14, color: AppTheme.colors.primary),
+                                  const SizedBox(width: 4),
+                                  Text('Verified Customer • ${_job!['skill_required'] ?? 'Job'}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                ],
+                              ),
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.phone_rounded, color: Colors.green),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Calling ${postedBy['name'] ?? 'Customer'}...'))
-                            );
-                          },
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.phone_in_talk_rounded, color: Colors.green, size: 22),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Calling ${postedBy['name'] ?? 'Customer'}...'))
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),
@@ -263,75 +310,99 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
             // Contact and Action Buttons for Assigned Worker
             if (isAssignedToMe && status == 'in_progress') ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: Text('Execution Actions', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-              ),
-              const SizedBox(height: 16),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            ChatScreen.routeName,
-                            arguments: {
-                              'jobId': _job!['_id'],
-                              'recipientName': postedBy['name'] ?? 'Customer',
-                            },
-                          );
-                        },
-                        icon: const Icon(Icons.chat_bubble_outline),
-                        label: const Text('MESSAGE'),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                      const Text('ACTIONS', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Colors.grey, letterSpacing: 1.0)),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  ChatScreen.routeName,
+                                  arguments: {
+                                    'jobId': _job!['_id'],
+                                    'recipientName': postedBy['name'] ?? 'Customer',
+                                    'recipientId': postedBy['_id'],
+                                  },
+                                );
+                              },
+                              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+                              label: const Text('Message'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppTheme.colors.primary,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: AppTheme.colors.primary.withValues(alpha: 0.3)),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Calling ${postedBy['name'] ?? 'Customer'}...'))
+                                );
+                              },
+                              icon: const Icon(Icons.phone_rounded, size: 20),
+                              label: const Text('Call Now'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.colors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Calling ${postedBy['name'] ?? 'Customer'}...'))
-                          );
-                        },
-                        icon: const Icon(Icons.phone),
-                        label: const Text('CALL'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                   ],
+                )
               ),
               const SizedBox(height: 32),
               
               // Finish Job Section
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppTheme.colors.primary.withValues(alpha: 0.05),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppTheme.colors.primary.withValues(alpha: 0.1)),
+                    boxShadow: [
+                      BoxShadow(color: AppTheme.colors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8)),
+                    ],
+                    border: Border.all(color: AppTheme.colors.primary.withValues(alpha: 0.2)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Finish This Job', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-                      const SizedBox(height: 8),
+                      Row(
+                         children: [
+                            Container(
+                               padding: const EdgeInsets.all(8),
+                               decoration: BoxDecoration(color: AppTheme.colors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                               child: Icon(Icons.check_circle_outline_rounded, color: AppTheme.colors.primary, size: 24),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text('Complete Job', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                         ]
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        'Upload photos of the completed work to notify the customer.',
+                        'Upload photos of your completed work to get paid.',
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                       const SizedBox(height: 20),
@@ -347,11 +418,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: Container(
                                 width: 100,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
                                 ),
-                                child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey),
+                                child: Column(
+                                   mainAxisAlignment: MainAxisAlignment.center,
+                                   children: [
+                                      Icon(Icons.add_a_photo_rounded, color: AppTheme.colors.primary, size: 28),
+                                      const SizedBox(height: 4),
+                                      Text('Add Photo', style: TextStyle(fontSize: 10, color: AppTheme.colors.primary, fontWeight: FontWeight.bold)),
+                                   ]
+                                ),
                               ),
                             ),
                             ..._completionPhotos.map((file) => Padding(
@@ -359,7 +437,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               child: Stack(
                                 children: [
                                   ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(16),
                                     child: Image.file(file, width: 100, height: 100, fit: BoxFit.cover),
                                   ),
                                   Positioned(
@@ -368,9 +446,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                     child: GestureDetector(
                                       onTap: () => setState(() => _completionPhotos.remove(file)),
                                       child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                        child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                        child: const Icon(Icons.close, color: Colors.red, size: 14),
                                       ),
                                     ),
                                   ),
@@ -390,11 +468,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             backgroundColor: AppTheme.colors.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 18),
+                            elevation: 8,
+                            shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: _isSubmitting 
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('SUBMIT COMPLETION PROOF', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Text('SUBMIT PROOF & FINISH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         ),
                       ),
                     ],
@@ -406,21 +486,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
             if (status == 'reviewing')
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.hourglass_empty, color: Colors.orange),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Waiting for customer to confirm your work.',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                      Container(
+                         padding: const EdgeInsets.all(8),
+                         decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), shape: BoxShape.circle),
+                         child: const Icon(Icons.hourglass_top_rounded, color: Colors.orange),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                              Text('Under Review', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange, fontSize: 16)),
+                              SizedBox(height: 4),
+                              Text('Waiting for customer confirmation.', style: TextStyle(color: Colors.black54, fontSize: 13)),
+                           ]
                         ),
                       ),
                     ],
@@ -432,7 +521,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             
             if (status == 'open')
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -455,17 +544,18 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         ? Colors.grey[300] 
                         : AppTheme.colors.primary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 0,
+                      elevation: (_job!['hasSubmittedQuotation'] == true) ? 0 : 8,
+                      shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
                     ),
                     child: Text(
                       (_job!['hasSubmittedQuotation'] == true) 
                         ? 'QUOTATION SENT' 
                         : 'SEND QUOTATION', 
                       style: TextStyle(
-                        fontSize: 15, 
+                        fontSize: 16, 
                         fontWeight: FontWeight.w900, 
                         color: (_job!['hasSubmittedQuotation'] == true) ? Colors.grey[600] : Colors.white, 
-                        letterSpacing: 1.2
+                        letterSpacing: 1.0
                       ),
                     ),
                   ),

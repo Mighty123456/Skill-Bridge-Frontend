@@ -345,6 +345,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                    arguments: {
                                      'jobId': _job!['_id'],
                                      'recipientName': worker['name'] ?? 'Worker',
+                                     'recipientId': worker['_id'],
                                    },
                                  );
                                },

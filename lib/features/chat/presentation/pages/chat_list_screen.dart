@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../../../../shared/themes/app_theme.dart';
 import '../../../../widgets/premium_app_bar.dart';
 import 'chat_screen.dart';
+import '../../data/chat_service.dart';
+import '../../data/models/chat_model.dart';
+import '../../../auth/data/auth_service.dart';
+import '../../../../core/utils/encryption_helper.dart';
 
 class ChatListScreen extends StatefulWidget {
   static const String routeName = '/chat-list';
@@ -13,33 +18,121 @@ class ChatListScreen extends StatefulWidget {
 }
 
 class _ChatListScreenState extends State<ChatListScreen> {
-  // Mock data for previous chats
-  final List<Map<String, dynamic>> _chats = [
-    {
-      'id': '1',
-      'recipientName': 'John Doe',
-      'recipientImage': null,
-      'lastMessage': 'Can you come tomorrow at 10 AM?',
-      'time': '10:30 AM',
-      'unreadCount': 2,
-    },
-    {
-      'id': '2',
-      'recipientName': 'Alice Smith',
-      'recipientImage': 'https://i.pravatar.cc/150?u=2',
-      'lastMessage': 'The job is completed. Please verify.',
-      'time': 'Yesterday',
-      'unreadCount': 0,
-    },
-    {
-      'id': '3',
-      'recipientName': 'Mike Johnson',
-      'recipientImage': null,
-      'lastMessage': 'Thanks for the quick service!',
-      'time': '2 days ago',
-      'unreadCount': 0,
-    },
-  ];
+  final ChatService _chatService = ChatService();
+  final AuthService _authService = AuthService();
+  
+  List<ChatModel> _chats = [];
+  bool _isLoading = true;
+  bool _isNavigating = false;
+  String? _currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      // 1. Try to get ID from token first (failsafe)
+      final token = await AuthService.getToken();
+      if (token != null) {
+         try {
+           final payload = _parseJwt(token);
+           if (payload.containsKey('userId')) {
+              _currentUserId = payload['userId'];
+           } else if (payload.containsKey('id')) {
+              _currentUserId = payload['id'];
+           } else if (payload.containsKey('_id')) {
+              _currentUserId = payload['_id'];
+           }
+         } catch (e) {
+           debugPrint('Token parse error in list: $e');
+         }
+      }
+
+      // 2. Fetch latest profile data if needed
+      if (_currentUserId == null) {
+          final userResponse = await _authService.getMe();
+          if (userResponse['success'] == true) {
+             final data = userResponse['data'];
+             if (data is Map && data.containsKey('user')) {
+                _currentUserId = data['user']['_id'];
+             } else if (data is Map && data.containsKey('_id')) {
+                _currentUserId = data['_id'];
+             }
+          }
+      }
+      
+      final chats = await _chatService.getChats();
+      if (mounted) {
+        setState(() {
+          _chats = chats;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        debugPrint('Error loading chat list: $e');
+      }
+    }
+  }
+
+  // Helper to parse JWT (copied from ChatScreen)
+  Map<String, dynamic> _parseJwt(String token) {
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        return {};
+      }
+      final payload = _decodeBase64(parts[1]);
+      final payloadMap = json.decode(payload);
+      if (payloadMap is! Map<String, dynamic>) {
+        return {};
+      }
+      return payloadMap;
+  }
+
+  String _decodeBase64(String str) {
+      String output = str.replaceAll('-', '+').replaceAll('_', '/');
+      switch (output.length % 4) {
+        case 0:
+          break;
+        case 2:
+          output += '==';
+          break;
+        case 3:
+          output += '=';
+          break;
+        default:
+          throw Exception('Illegal base64url string!"');
+      }
+      return utf8.decode(base64Url.decode(output));
+  }
+
+  Map<String, dynamic> _getRecipient(ChatModel chat) {
+    if (_currentUserId == null) return {};
+    
+    // Debug print if needed
+    // debugPrint('Me: $_currentUserId, Participants: ${chat.participants.map((p) => p['_id']).toList()}');
+
+    final recipient = chat.participants.firstWhere(
+      (p) => p['_id'] != _currentUserId,
+      orElse: () => {},
+    );
+    return recipient;
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    if (now.difference(time).inDays == 0) {
+      return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+    } else if (now.difference(time).inDays < 7) {
+      return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][time.weekday - 1];
+    } else {
+      return '${time.day}/${time.month}';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,44 +141,66 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: const PremiumAppBar(
         title: 'Messages',
         showBackButton: true,
+        hideChatAction: true,
       ),
-      body: _chats.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.chat_bubble_outline_rounded, size: 64, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No messages yet',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w600),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _chats.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.chat_bubble_outline_rounded, size: 64, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No messages yet',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              itemCount: _chats.length,
-              separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
-              itemBuilder: (context, index) {
-                final chat = _chats[index];
-                return _buildChatTile(chat);
-              },
-            ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  itemCount: _chats.length,
+                  separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
+                  itemBuilder: (context, index) {
+                    final chat = _chats[index];
+                    return _buildChatTile(chat);
+                  },
+                ),
     );
   }
 
-  Widget _buildChatTile(Map<String, dynamic> chat) {
+  Widget _buildChatTile(ChatModel chat) {
+    final recipient = _getRecipient(chat);
+    final recipientName = recipient['name'] ?? 'Unknown User';
+    final recipientImage = recipient['profileImage']; 
+    // Fix profile image URL if it's partial or needs base URL? 
+    // Assuming full URL or handling elsewhere. The mock had 'https://...'
+    // If backend returns incomplete path (e.g. 'uploads/...'), we should prepend base URL. But let's assume raw string for now
+    
+    final unreadCount = chat.unreadCounts[_currentUserId] ?? 0;
+
     return InkWell(
-      onTap: () {
-        Navigator.pushNamed(
-          context,
-          ChatScreen.routeName,
-          arguments: {
-            'chatId': chat['id'],
-            'recipientName': chat['recipientName'],
-          },
-        );
+      onTap: () async {
+        if (_isNavigating) return;
+        _isNavigating = true;
+        try {
+          await Navigator.pushNamed(
+            context,
+            ChatScreen.routeName,
+            arguments: {
+              'chatId': chat.id,
+              'recipientName': recipientName,
+              'recipientImage': recipientImage,
+              'recipientId': recipient['_id'],
+            },
+          );
+          // Refresh on return
+          _loadData();
+        } finally {
+          _isNavigating = false;
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -96,13 +211,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: AppTheme.colors.primary.withOpacity(0.1),
-                  backgroundImage: chat['recipientImage'] != null
-                      ? NetworkImage(chat['recipientImage'])
+                  backgroundColor: AppTheme.colors.primary.withValues(alpha: 0.1),
+                  backgroundImage: recipientImage != null
+                      ? NetworkImage(recipientImage) // If not valid URL this might crash? Use NetworkImage safely?
                       : null,
-                  child: chat['recipientImage'] == null
+                  child: recipientImage == null
                       ? Text(
-                          chat['recipientName'][0],
+                          recipientName.isNotEmpty ? recipientName[0].toUpperCase() : '?',
                           style: TextStyle(
                             color: AppTheme.colors.primary,
                             fontWeight: FontWeight.bold,
@@ -111,7 +226,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         )
                       : null,
                 ),
-                if (chat['unreadCount'] > 0)
+                if (unreadCount > 0)
                   Positioned(
                     right: 0,
                     top: 0,
@@ -136,7 +251,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        chat['recipientName'],
+                        recipientName,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -144,11 +259,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         ),
                       ),
                       Text(
-                        chat['time'],
+                        _formatTime(chat.lastMessageTime),
                         style: TextStyle(
-                          color: chat['unreadCount'] > 0 ? AppTheme.colors.primary : Colors.grey[500],
+                          color: unreadCount > 0 ? AppTheme.colors.primary : Colors.grey[500],
                           fontSize: 12,
-                          fontWeight: chat['unreadCount'] > 0 ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -158,17 +273,17 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          chat['lastMessage'],
+                          EncryptionHelper.decryptMessage(chat.lastMessage),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: chat['unreadCount'] > 0 ? Colors.black87 : Colors.grey[600],
+                            color: unreadCount > 0 ? Colors.black87 : Colors.grey[600],
                             fontSize: 14,
-                            fontWeight: chat['unreadCount'] > 0 ? FontWeight.w600 : FontWeight.normal,
+                            fontWeight: unreadCount > 0 ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
                       ),
-                      if (chat['unreadCount'] > 0)
+                      if (unreadCount > 0)
                         Container(
                           margin: const EdgeInsets.only(left: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -177,7 +292,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            chat['unreadCount'].toString(),
+                            unreadCount.toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,

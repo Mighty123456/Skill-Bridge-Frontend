@@ -101,77 +101,105 @@ class _JobBidScreenState extends State<JobBidScreen> {
     final bool isEmergency = urgency.toLowerCase() == 'emergency';
 
     return Scaffold(
-      backgroundColor: AppTheme.colors.background,
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: const PremiumAppBar(
         title: 'Submit Quotation',
         showBackButton: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Job Summary
+              // Professional Job Summary Card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: (isEmergency ? Colors.red : AppTheme.colors.primary).withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: (isEmergency ? Colors.red : AppTheme.colors.primary).withValues(alpha: 0.1)),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 4)),
+                  ],
+                  border: isEmergency ? Border.all(color: Colors.red.withValues(alpha: 0.3)) : null,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          isEmergency ? Icons.warning_amber_rounded : Icons.work_rounded, 
-                          color: isEmergency ? Colors.red : AppTheme.colors.primary, 
-                          size: 20
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: (isEmergency ? Colors.red : AppTheme.colors.primary).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            isEmergency ? Icons.warning_amber_rounded : Icons.work_rounded, 
+                            color: isEmergency ? Colors.red : AppTheme.colors.primary, 
+                            size: 24
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 16),
                         Expanded(
-                          child: Text(
-                            title, 
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title, 
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      job['location']?['address_text'] ?? 'Unknown Location', 
+                                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
+                    const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider(height: 1)),
+                    const Text('DESCRIPTION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
                     const SizedBox(height: 8),
                     Text(
-                      'Urgency: ${urgency.toUpperCase()} • ${job['location']?['address_text'] ?? 'Unknown'}', 
-                      style: const TextStyle(fontSize: 12, color: Colors.grey)
+                      job['job_description'] ?? 'No description provided.',
+                      style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5),
                     ),
-                    const Divider(height: 24),
-                    Text(
-                      job['job_description'] ?? 'No description provided',
-                      style: const TextStyle(fontSize: 13, color: Colors.black87),
-                    ),
-                    const SizedBox(height: 12),
                     if (job['issue_photos'] != null && (job['issue_photos'] as List).whereType<String>().isNotEmpty) ...[
-                      const Text(
-                        'PHOTOS:',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
+                      const SizedBox(height: 16),
+                      const Text('PHOTOS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
                       const SizedBox(height: 8),
                       SizedBox(
-                        height: 100,
+                        height: 80,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: (job['issue_photos'] as List).length,
-                          separatorBuilder: (context, index) => const SizedBox(width: 8),
-                          itemBuilder: (context, index) => ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              job['issue_photos'][index],
-                              width: 140,
-                              fit: BoxFit.cover,
+                          separatorBuilder: (context, index) => const SizedBox(width: 10),
+                          itemBuilder: (context, index) => GestureDetector(
+                            onTap: () {
+                              // Maybe view full image
+                            },
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                job['issue_photos'][index],
+                                width: 80,
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         ),
@@ -180,72 +208,96 @@ class _JobBidScreenState extends State<JobBidScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-
-              const Text('YOUR QUOTATION', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1.2, color: Colors.grey)),
-              const SizedBox(height: 16),
-
-              _buildField(
-                label: 'Labor Cost (₹)',
-                controller: _laborCostController,
-                hint: 'e.g. 500',
-                icon: Icons.person_outline,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Required';
-                  if (double.tryParse(value) == null) return 'Invalid number';
-                  return null;
-                },
+              
+              const SizedBox(height: 24),
+              const Padding(
+                padding: EdgeInsets.only(left: 4, bottom: 12),
+                child: Text('YOUR QUOTATION DETAILS', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 1, color: Colors.black54)),
               ),
-              const SizedBox(height: 20),
+              
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                     BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildField(
+                      label: 'Labor Cost (₹)',
+                      controller: _laborCostController,
+                      hint: 'e.g. 500',
+                      icon: Icons.person_outline_rounded,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Required';
+                        if (double.tryParse(value) == null) return 'Invalid number';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
 
-              _buildField(
-                label: 'Estimated Material Cost (₹)',
-                controller: _materialCostController,
-                hint: 'e.g. 200 (if any)',
-                icon: Icons.build_outlined,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 20),
+                    _buildField(
+                      label: 'Material Cost (₹)',
+                      controller: _materialCostController,
+                      hint: 'e.g. 200 (optional)',
+                      icon: Icons.inventory_2_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 20),
 
-              _buildField(
-                label: 'Estimated Timeline (Days)',
-                controller: _timelineController,
-                hint: 'e.g. 1',
-                icon: Icons.timer_outlined,
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Required';
-                  if (int.tryParse(value) == null) return 'Invalid number';
-                  return null;
-                },
+                    _buildField(
+                      label: 'Est. Timeline (Days)',
+                      controller: _timelineController,
+                      hint: 'e.g. 2',
+                      icon: Icons.timer_outlined,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) return 'Required';
+                        if (int.tryParse(value) == null) return 'Invalid number';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    _buildField(
+                      label: 'Notes / Approach',
+                      controller: _noteController,
+                      hint: 'Briefly explain your work plan...',
+                      icon: Icons.description_outlined,
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 20),
-
-              _buildField(
-                label: 'Notes / Way of Work',
-                controller: _noteController,
-                hint: 'Briefly explain how you will fix this...',
-                icon: Icons.description_outlined,
-                maxLines: 4,
-              ),
+              
               const SizedBox(height: 32),
 
               SizedBox(
                 width: double.infinity,
-                height: 55,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.colors.primary,
                     foregroundColor: Colors.white,
                     elevation: 4,
-                    shadowColor: AppTheme.colors.primary.withValues(alpha: 0.3),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('SUBMIT QUOTATION', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.send_rounded, size: 20),
+                          SizedBox(width: 8),
+                          Text('SUBMIT QUOTATION', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        ],
+                      ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -267,23 +319,10 @@ class _JobBidScreenState extends State<JobBidScreen> {
       final remaining = endTime.difference(DateTime.now());
       
       if (remaining.isNegative) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.red, size: 20),
-              SizedBox(width: 12),
-              Text(
-                'This job is no longer accepting quotations.',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-            ],
+        return Center(
+          child: Text(
+            'Quotation window closed',
+            style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold, fontSize: 13),
           ),
         );
       }
@@ -293,33 +332,16 @@ class _JobBidScreenState extends State<JobBidScreen> {
       final isUrgent = hours < 1;
       final color = isUrgent ? Colors.red : Colors.orange;
 
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(isUrgent ? Icons.timer_rounded : Icons.info_outline, size: 18, color: color),
-                const SizedBox(width: 8),
-                Text(
-                  'Time Remaining: ${hours}h ${minutes}m', 
-                  style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w900, letterSpacing: 0.5)
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              isUrgent ? 'Hurry! Window is closing soon.' : 'Submit your best quote before the deadline.',
-              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.access_time_rounded, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            'Time remaining: ${hours}h ${minutes}m', 
+            style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w600)
+          ),
+        ],
       );
     } catch (e) {
       return const SizedBox.shrink();
@@ -338,29 +360,32 @@ class _JobBidScreenState extends State<JobBidScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(label, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[700])),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
           validator: validator,
+          style: const TextStyle(fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, size: 20, color: AppTheme.colors.primary),
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+            prefixIcon: Icon(icon, size: 22, color: Colors.grey[500]),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12), 
-              borderSide: const BorderSide(color: Colors.black12)
+              borderSide: BorderSide.none
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12), 
-              borderSide: const BorderSide(color: Colors.black12)
+              borderSide: BorderSide(color: Colors.grey[200]!)
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12), 
-              borderSide: BorderSide(color: AppTheme.colors.primary, width: 2)
+              borderSide: BorderSide(color: AppTheme.colors.primary, width: 1.5)
             ),
           ),
         ),
