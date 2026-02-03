@@ -47,11 +47,7 @@ class WorkerWalletScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.colors.primary, AppTheme.colors.primaryLight], // Teal gradient
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.colors.primary,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -80,7 +76,7 @@ class WorkerWalletScreen extends StatelessWidget {
            ),
           const SizedBox(height: 12),
           const Text(
-            '₹8,450.00',
+            '₹0.00',
             style: TextStyle(
               color: Colors.white,
               fontSize: 36,
@@ -93,11 +89,11 @@ class WorkerWalletScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _buildBalanceInfo('Pending', '₹2,100.00', Icons.timelapse_rounded),
+                child: _buildBalanceInfo('Pending', '₹0.00', Icons.timelapse_rounded),
               ),
               Container(width: 1, height: 40, color: Colors.white24),
               Expanded(
-                child: _buildBalanceInfo('Withdrawable', '₹6,350.00', Icons.check_circle_outline_rounded),
+                child: _buildBalanceInfo('Withdrawable', '₹0.00', Icons.check_circle_outline_rounded),
               ),
             ],
           ),
@@ -179,72 +175,24 @@ class WorkerWalletScreen extends StatelessWidget {
   }
 
   Widget _buildTransactionList() {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: 5,
-      itemBuilder: (context, index) {
-        final isCredit = index % 2 == 0;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            leading: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isCredit ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                color: isCredit ? Colors.green : Colors.red,
-                size: 22,
-              ),
-            ),
-            title: Text(
-              isCredit ? 'Payment Received' : 'Withdrawal',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
-            ),
-            subtitle: Padding(
-              padding: const EdgeInsets.only(top: 4.0),
-              child: Text(
-                isCredit ? 'Kitchen Sink Repair' : 'HDFC Bank **** 1234',
-                style: const TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: Column(
               children: [
+                Icon(Icons.receipt_long_rounded, size: 48, color: Colors.grey[300]),
+                const SizedBox(height: 12),
                 Text(
-                  '${isCredit ? "+" : "-"} ₹${isCredit ? "400" : "2,000"}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: isCredit ? Colors.green : Colors.black87,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Today, 10:30 AM', // Mock data
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                  'No recent transactions',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }

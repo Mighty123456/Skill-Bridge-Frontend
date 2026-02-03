@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'login_screen.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../data/auth_service.dart';
@@ -466,9 +467,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: PremiumLoader(
+                    size: 20,
+                    color: Colors.white,
                   ),
                 )
               : const Text(
@@ -565,9 +566,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: PremiumLoader(
+                    size: 20,
+                    color: Colors.white,
                   ),
                 )
               : const Text(
@@ -696,9 +697,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: PremiumLoader(
+                    size: 20,
+                    color: Colors.white,
                   ),
                 )
               : const Text(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import '../../data/auth_service.dart';
 import 'login_screen.dart';
 import '../../../../widgets/custom_feedback_popup.dart';
@@ -296,9 +297,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                       ? const SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(
-                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                             strokeWidth: 2.5,
+                          child: PremiumLoader(
+                             color: Colors.white,
+                             size: 24,
                           ),
                         )
                       : const Text(

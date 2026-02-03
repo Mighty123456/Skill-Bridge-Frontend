@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/quotation_card.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import 'package:skillbridge_mobile/features/tenant/data/quotation_service.dart';
 import 'package:skillbridge_mobile/features/tenant/data/tenant_job_service.dart';
@@ -148,7 +149,7 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: PremiumLoader())
           : _errorMessage != null
               ? _buildErrorState()
               : Column(

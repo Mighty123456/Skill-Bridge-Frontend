@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../../shared/themes/app_theme.dart';
@@ -557,9 +558,10 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       ? const SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+
+                          child: PremiumLoader(
+                            size: 24,
+                            color: Colors.white,
                           ),
                         )
                       : const Text(

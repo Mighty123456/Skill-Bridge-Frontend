@@ -5,7 +5,7 @@ import '../../../../features/auth/data/auth_service.dart';
 
 class NotificationService {
   static Future<List<Map<String, dynamic>>> getNotifications() async {
-    final token = AuthService.token;
+    final token = await AuthService.getToken();
     if (token == null) return [];
 
     try {
@@ -28,7 +28,7 @@ class NotificationService {
   }
 
   static Future<void> markAsRead(String id) async {
-    final token = AuthService.token;
+    final token = await AuthService.getToken();
     if (token == null) return;
 
     try {

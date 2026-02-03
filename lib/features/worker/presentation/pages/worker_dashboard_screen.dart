@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../widgets/available_job_card.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
+import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
 import 'worker_wallet_screen.dart';
 import 'worker_performance_screen.dart';
 import 'worker_notifications_screen.dart';
 import '../../data/worker_dashboard_service.dart';
 import '../../../auth/data/auth_service.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
+import 'worker_passport_screen.dart';
 
 class WorkerDashboardScreen extends StatefulWidget {
   const WorkerDashboardScreen({super.key});
@@ -60,10 +63,15 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
       if (user['success'] == true && mounted) {
         setState(() {
           _userName = user['data']['name'] ?? 'Worker';
+           // Check for isOnline or availabilityStatus field from backend
+           // If backend uses 'isOnline' (which we just added), use that.
+          if (user['data'].containsKey('isOnline')) {
+             _isOnline = user['data']['isOnline'];
+          }
         });
       }
     } catch (e) {
-      // Slient fail
+      // Silent fail
     }
   }
 
@@ -112,19 +120,37 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
     });
   }
 
-  void _toggleOnlineStatus(bool value) {
+  Future<void> _toggleOnlineStatus(bool value) async {
+    // Optimistic update
     setState(() {
       _isOnline = value;
     });
     
-    // In a real app, you would call an API here to update status
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(value ? 'You are now ONLINE. You will receive job notifications.' : 'You are now OFFLINE. You won\'t receive new jobs.'),
-        backgroundColor: value ? Colors.green : Colors.grey,
-        duration: const Duration(seconds: 2),
-      )
-    );
+    final result = await WorkerDashboardService.updateAvailability(value);
+    
+    if (!mounted) return;
+
+    if (result['success']) {
+      CustomFeedbackPopup.show(
+        context,
+        title: value ? 'You are Online' : 'You are Offline',
+        message: value 
+            ? 'You are now ONLINE. You will receive job notifications.' 
+            : 'You are now OFFLINE. You won\'t receive new jobs.',
+        type: value ? FeedbackType.success : FeedbackType.info,
+      );
+    } else {
+      // Revert if failed
+      setState(() {
+        _isOnline = !value;
+      });
+      CustomFeedbackPopup.show(
+        context,
+        title: 'Status Update Failed',
+        message: result['message'] ?? "Unknown error",
+        type: FeedbackType.error,
+      );
+    }
   }
 
   @override
@@ -213,28 +239,14 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.colors.secondary,
-                                  AppTheme.colors.secondaryLight,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.colors.secondary.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.workspace_premium, color: Colors.white, size: 16),
+                                Icon(Icons.star_outline_rounded, color: Colors.black54, size: 16),
                                 SizedBox(width: 4),
-                                Text('Gold Pro', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                                Text('Performance', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
                               ],
                             ),
                           ),
@@ -258,7 +270,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
                       children: [
                         _buildStatCard(
                           'Rating', 
-                          '4.9', 
+                          '0.0', 
                           Icons.star_rounded, 
                           AppTheme.colors.secondary,
                           AppTheme.colors.secondary.withValues(alpha: 0.1),
@@ -266,12 +278,22 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
                         const SizedBox(width: 16),
                         _buildStatCard(
                           'Jobs Done', 
-                          '124', 
+                          '0', 
                           Icons.check_circle_rounded, 
                           AppTheme.colors.primary,
                           AppTheme.colors.primary.withValues(alpha: 0.1),
                         ),
                       ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+
+                    // Skill Passport Card
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (context) => const WorkerPassportScreen()));
+                      },
+                      child: _buildPassportCard(),
                     ),
                     
                     const SizedBox(height: 32),
@@ -326,7 +348,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
             if (_isLoading && _jobs.isEmpty)
               const SliverFillRemaining(
                 hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: PremiumLoader()),
               )
             else if (_error != null)
               SliverFillRemaining(
@@ -431,7 +453,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
             color: isSelected ? AppTheme.colors.primary : Colors.grey.shade300,
           ),
           boxShadow: isSelected 
-             ? [BoxShadow(color: AppTheme.colors.primary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 4))] 
+             ? [BoxShadow(color: AppTheme.colors.primary.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2))] 
              : [],
         ),
         child: Text(
@@ -451,20 +473,13 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.colors.primary,
-            AppTheme.colors.primaryLight,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.colors.primary,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.colors.primary.withValues(alpha: 0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: AppTheme.colors.primary.withValues(alpha: 0.2), // Reduced opacity
+            blurRadius: 8, // Reduced blur
+            offset: const Offset(0, 4),
           )
         ],
       ),
@@ -496,7 +511,7 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
           ),
           const SizedBox(height: 12),
           const Text(
-            '₹12,450.00', 
+            '₹0.00', 
             style: TextStyle(
               color: Colors.white, 
               fontSize: 34, 
@@ -507,9 +522,9 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
           const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(child: _buildEarningSubItem('Pending', '₹1,200', Icons.pending_outlined)),
+              Expanded(child: _buildEarningSubItem('Pending', '₹0.00', Icons.pending_outlined)),
               Container(width: 1, height: 40, color: Colors.white24),
-              Expanded(child: _buildEarningSubItem('Withdrawable', '₹4,500', Icons.account_balance_wallet_outlined)),
+              Expanded(child: _buildEarningSubItem('Withdrawable', '₹0.00', Icons.account_balance_wallet_outlined)),
             ],
           ),
         ],
@@ -538,6 +553,58 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildPassportCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.colors.secondary,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.colors.secondary.withValues(alpha: 0.2), // Reduced opacity
+            blurRadius: 8, // Reduced blur
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Digital Skill Passport',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'View your badge & skill stats',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.verified_user, color: Colors.white, size: 24),
+          ),
+        ],
+      ),
     );
   }
 

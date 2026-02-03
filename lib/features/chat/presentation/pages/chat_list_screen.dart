@@ -8,6 +8,8 @@ import '../../data/models/chat_model.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../../../core/utils/encryption_helper.dart';
 
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
+
 class ChatListScreen extends StatefulWidget {
   static const String routeName = '/chat-list';
 
@@ -144,7 +146,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         hideChatAction: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: PremiumLoader())
           : _chats.isEmpty
               ? Center(
                   child: Column(
@@ -285,17 +287,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       ),
                       if (unreadCount > 0)
                         Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppTheme.colors.primary,
-                            borderRadius: BorderRadius.circular(10),
+                          margin: const EdgeInsets.only(left: 12),
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF25D366), // WhatsApp Green
+                            shape: BoxShape.circle,
                           ),
                           child: Text(
-                            unreadCount.toString(),
+                            unreadCount > 9 ? '9+' : unreadCount.toString(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

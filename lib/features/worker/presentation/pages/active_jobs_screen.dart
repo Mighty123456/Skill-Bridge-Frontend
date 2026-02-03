@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import '../../../../widgets/premium_app_bar.dart';
 import '../../data/worker_dashboard_service.dart';
 
@@ -53,16 +54,11 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
         indicator: BoxDecoration(
           color: AppTheme.colors.primary,
           borderRadius: BorderRadius.circular(22),
-          gradient: LinearGradient(
-              colors: [AppTheme.colors.primary, AppTheme.colors.primaryLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-          ),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.colors.primary.withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+              color: AppTheme.colors.primary.withValues(alpha: 0.2), // Reduced opacity
+              blurRadius: 4, // Reduced blur
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -125,9 +121,9 @@ class _JobListState extends State<JobList> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Center(
-        child: CircularProgressIndicator(
+        child: PremiumLoader(
           color: AppTheme.colors.primary,
-          strokeWidth: 3,
+          size: 40,
         ),
       );
     }
@@ -240,9 +236,9 @@ class _JobListState extends State<JobList> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.03), // Reduced opacity
+            blurRadius: 8, // Reduced blur
+            offset: const Offset(0, 2),
           ),
         ],
       ),

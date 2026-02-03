@@ -50,4 +50,27 @@ class WorkerDashboardService {
       return {'success': false, 'message': e.toString()};
     }
   }
+  static Future<Map<String, dynamic>> updateAvailability(bool isOnline) async {
+    final token = await AuthService.getToken();
+    if (token == null) return {'success': false, 'message': 'Not authenticated'};
+
+    try {
+      final response = await http.patch(
+        Uri.parse('${ApiConfig.baseUrl}/auth/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'isOnline': isOnline}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'data': data['data']['user']};
+      }
+      return {'success': false, 'message': data['message'] ?? 'Failed to update status'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

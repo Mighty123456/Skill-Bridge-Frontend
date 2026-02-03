@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import '../../data/notification_service.dart';
 
+
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 
 class WorkerNotificationsScreen extends StatefulWidget {
   static const String routeName = '/worker-notifications';
@@ -40,18 +43,13 @@ class _WorkerNotificationsScreenState extends State<WorkerNotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.colors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Notifications',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
+      appBar: const PremiumAppBar(
+        title: 'Notifications',
+        showBackButton: true,
+        hideNotificationAction: true,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: PremiumLoader())
           : _notifications.isEmpty
               ? _buildEmptyState()
               : RefreshIndicator(

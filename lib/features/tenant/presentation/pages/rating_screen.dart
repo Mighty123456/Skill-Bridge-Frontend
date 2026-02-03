@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 
 class RatingScreen extends StatefulWidget {
   static const String routeName = '/rating';
@@ -14,8 +15,9 @@ class _RatingScreenState extends State<RatingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Rate & Feedback'),
+      appBar: const PremiumAppBar(
+        title: 'Rate & Feedback',
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),

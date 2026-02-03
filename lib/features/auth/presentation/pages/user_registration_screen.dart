@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../data/auth_service.dart';
 import 'otp_verification_screen.dart';
@@ -474,12 +475,12 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const SizedBox(
+                      ? SizedBox(
                           height: 24,
                           width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          child: PremiumLoader(
+                            size: 20,
+                            color: _activeColor,
                           ),
                         )
                       : const Text(
@@ -716,9 +717,9 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                     ? SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(_activeColor),
+                        child: PremiumLoader(
+                          size: 20,
+                          color: _activeColor,
                         ),
                       )
                     : Row(

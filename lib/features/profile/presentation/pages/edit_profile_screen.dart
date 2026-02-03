@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
-import '../../../../widgets/custom_feedback_popup.dart';
+
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
+import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
+import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import '../../../auth/data/auth_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
@@ -119,15 +122,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FA),
-      appBar: AppBar(
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black,
+      appBar: const PremiumAppBar(
+        title: 'Edit Profile',
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -213,7 +210,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     elevation: 0,
                   ),
                   child: _isSaving
-                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      ? const PremiumLoader(color: Colors.white, size: 24)
                       : const Text(
                           'Save Changes',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),

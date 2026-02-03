@@ -38,7 +38,7 @@ class PremiumAppBar extends StatefulWidget implements PreferredSizeWidget {
 
 class _PremiumAppBarState extends State<PremiumAppBar> {
   // ... (existing state code)
-  bool _hasUnreadNotifications = false;
+  int _unreadNotificationCount = 0;
 
   @override
   void initState() {
@@ -51,7 +51,7 @@ class _PremiumAppBarState extends State<PremiumAppBar> {
       final notifications = await NotificationService.getNotifications();
       if (mounted) {
         setState(() {
-          _hasUnreadNotifications = notifications.any((n) => n['read'] == false);
+          _unreadNotificationCount = notifications.where((n) => n['read'] == false).length;
         });
       }
     } catch (_) {
@@ -135,7 +135,7 @@ class _PremiumAppBarState extends State<PremiumAppBar> {
                            const SizedBox(width: 8),
                            _buildActionIcon(
                              icon: Icons.notifications_none_rounded,
-                             hasBadge: _hasUnreadNotifications,
+                             badgeCount: _unreadNotificationCount,
                              onTap: widget.onNotificationTap ?? () => _navigateByRole(context, 'notifications'),
                            ),
                         ],
@@ -167,19 +167,27 @@ class _PremiumAppBarState extends State<PremiumAppBar> {
     if (result['success']) {
       final user = result['data']['user'];
       final role = user['role'];
+      final currentRoute = ModalRoute.of(context)?.settings.name;
 
       if (destination == 'notifications') {
-        if (role == 'worker') {
-          await Navigator.pushNamed(context, WorkerNotificationsScreen.routeName);
+        final targetRoute = role == 'worker' 
+            ? WorkerNotificationsScreen.routeName 
+            : TenantNotificationsScreen.routeName;
+            
+        if (currentRoute == ChatListScreen.routeName) {
+           await Navigator.pushReplacementNamed(context, targetRoute);
         } else {
-          await Navigator.pushNamed(context, TenantNotificationsScreen.routeName);
+           await Navigator.pushNamed(context, targetRoute);
+           if (mounted) _checkUnreadNotifications();
         }
-        // Refresh unread status on return
-        _checkUnreadNotifications();
       } else if (destination == 'chat') {
-         await Navigator.pushNamed(context, ChatListScreen.routeName);
-         // Refresh unread status on return (if we add chat badge later)
-         _checkUnreadNotifications();
+         if (currentRoute == TenantNotificationsScreen.routeName || 
+             currentRoute == WorkerNotificationsScreen.routeName) {
+            await Navigator.pushReplacementNamed(context, ChatListScreen.routeName);
+         } else {
+            await Navigator.pushNamed(context, ChatListScreen.routeName);
+            if (mounted) _checkUnreadNotifications();
+         }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -217,7 +225,8 @@ class _PremiumAppBarState extends State<PremiumAppBar> {
 
   Widget _buildActionIcon({
     required IconData icon,
-    required bool hasBadge,
+    bool hasBadge = false,
+    int badgeCount = 0,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -238,8 +247,34 @@ class _PremiumAppBarState extends State<PremiumAppBar> {
           alignment: Alignment.center,
           children: [
             Icon(icon, color: Colors.grey[800], size: 22),
-            if (hasBadge)
+            if (badgeCount > 0)
               Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    badgeCount > 9 ? '9+' : badgeCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            else if (hasBadge)
+               Positioned(
                 right: 12,
                 top: 10,
                 child: Container(

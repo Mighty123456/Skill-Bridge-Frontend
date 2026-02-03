@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import 'package:skillbridge_mobile/features/tenant/data/tenant_job_service.dart';
+import 'job_detail_screen.dart';
+import 'job_execution_screen.dart';
 
 class MyJobsScreen extends StatefulWidget {
   const MyJobsScreen({super.key});
@@ -125,9 +128,9 @@ class _JobsListState extends State<_JobsList> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Center(
-        child: CircularProgressIndicator(
+        child: PremiumLoader(
           color: AppTheme.colors.primary,
-          strokeWidth: 3,
+          size: 40,
         ),
       );
     }
@@ -240,7 +243,19 @@ class _JobsListState extends State<_JobsList> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            // Navigate to detail
+            if (status == 'assigned' || status == 'in_progress' || status == 'reviewing') {
+              Navigator.pushNamed(
+                context,
+                JobExecutionScreen.routeName,
+                arguments: job,
+              );
+            } else {
+              Navigator.pushNamed(
+                context,
+                JobDetailScreen.routeName,
+                arguments: {'jobData': job},
+              );
+            }
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(

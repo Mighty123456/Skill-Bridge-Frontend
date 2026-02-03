@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../../../widgets/custom_feedback_popup.dart';
 
@@ -507,9 +508,10 @@ class _LoginScreenState extends State<LoginScreen>
                                     ? const SizedBox(
                                         height: 24,
                                         width: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          valueColor: AlwaysStoppedAnimation(Colors.white),
+
+                                        child: PremiumLoader(
+                                          size: 24,
+                                          color: Colors.white,
                                         ),
                                       )
                                     : const Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 
 class PaymentScreen extends StatelessWidget {
   static const String routeName = '/payment';
@@ -8,8 +9,9 @@ class PaymentScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Payment & Invoice'),
+      appBar: const PremiumAppBar(
+        title: 'Payment & Invoice',
+        showBackButton: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -20,7 +22,7 @@ class PaymentScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const Text('Job Completed Successfully!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            const Text('Payment of ₹550 has been released to Ramesh.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+            const Text('Payment of ₹0 has been released to Ramesh.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
             const SizedBox(height: 32),
 
             // Cost Breakdown
@@ -36,11 +38,11 @@ class PaymentScreen extends StatelessWidget {
                 children: [
                   const Text('Payment Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 20),
-                  _buildPriceRow('Service Charge', '₹450.00'),
-                  _buildPriceRow('Material Cost', '₹80.00'),
-                  _buildPriceRow('Platform Fee', '₹20.00'),
+                  _buildPriceRow('Service Charge', '₹0.00'),
+                  _buildPriceRow('Material Cost', '₹0.00'),
+                  _buildPriceRow('Platform Fee', '₹0.00'),
                   const Divider(height: 32),
-                  _buildPriceRow('Total Amount', '₹550.00', isTotal: true),
+                  _buildPriceRow('Total Amount', '₹0.00', isTotal: true),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

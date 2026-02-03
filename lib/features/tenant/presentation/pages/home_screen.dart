@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import '../widgets/skill_category_card.dart';
 import '../widgets/emergency_banner.dart';
 import '../widgets/active_job_summary_card.dart';
@@ -147,7 +148,7 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
               if (_isLoading)
                 const Center(child: Padding(
                   padding: EdgeInsets.all(20.0),
-                  child: CircularProgressIndicator(),
+                  child: PremiumLoader(),
                 ))
               else if (_activeJobs.isEmpty)
                 _buildEmptyJobsState()

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
 import 'package:skillbridge_mobile/features/tenant/data/quotation_service.dart';
+import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 
 class JobQuotationsScreen extends StatefulWidget {
   final Map<String, dynamic> jobData;
@@ -122,20 +124,18 @@ class _JobQuotationsScreenState extends State<JobQuotationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.colors.background,
-      appBar: AppBar(
-        title: const Text('Quotations'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
+      appBar: PremiumAppBar(
+        title: 'Quotations',
+        showBackButton: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.black87),
             onPressed: _fetchQuotations,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: PremiumLoader())
           : _errorMessage != null
               ? _buildErrorState()
               : _quotations.isEmpty
@@ -263,13 +263,79 @@ class _JobQuotationsScreenState extends State<JobQuotationsScreen> {
                     _buildInfoColumn('Timeline', '$days Days'),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                
+                // Tags Section
+                if (quotation['tags'] != null && (quotation['tags'] as List).isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: (quotation['tags'] as List).map<Widget>((tag) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.withValues(alpha: 0.1)),
+                        ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(fontSize: 11, color: AppTheme.colors.primary, fontWeight: FontWeight.w500),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 const Text('Worker Notes:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 4),
                 Text(
                   notes,
                   style: const TextStyle(fontSize: 13, color: Colors.black87),
                 ),
+
+                // Video Pitch Section
+                if (quotation['video_url'] != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                         Container(
+                           padding: const EdgeInsets.all(8),
+                           decoration: BoxDecoration(
+                             color: Colors.red.withValues(alpha: 0.1),
+                             shape: BoxShape.circle
+                           ),
+                           child: const Icon(Icons.play_arrow_rounded, color: Colors.red),
+                         ),
+                         const SizedBox(width: 12),
+                         const Column(
+                           crossAxisAlignment: CrossAxisAlignment.start,
+                           children: [
+                             Text('Video Pitch Attached', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                             Text('Tap to watch explanation', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                           ],
+                         ),
+                         const Spacer(),
+                         TextButton(
+                           onPressed: () {
+                              // Launch video logic (e.g. url_launcher or video player dialog)
+                              // For now, just show a snackbar
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Playing video from: ${quotation['video_url']}')));
+                           },
+                           child: const Text('WATCH'),
+                         )
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

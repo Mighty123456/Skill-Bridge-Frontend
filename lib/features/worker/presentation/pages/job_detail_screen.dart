@@ -8,6 +8,8 @@ import '../../data/job_accept_service.dart';
 import '../../data/job_execution_service.dart';
 import '../../../../features/tenant/presentation/widgets/status_timeline.dart';
 import '../../../../features/chat/presentation/pages/chat_screen.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class JobDetailScreen extends StatefulWidget {
   static const String routeName = '/worker-job-detail';
@@ -26,10 +28,41 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final List<File> _completionPhotos = [];
   bool _isSubmitting = false;
 
+  final TextEditingController _otpController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _loadJobDetails();
+  }
+
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _startJob() async {
+    if (_otpController.text.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid 4-digit OTP')));
+      return;
+    }
+    setState(() => _isSubmitting = true);
+    final result = await JobExecutionService.startJob(_job!['_id'], _otpController.text);
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      if (result['success']) {
+         _loadJobDetails();
+         CustomFeedbackPopup.show(
+           context, 
+           title: 'Job Started!', 
+           message: 'Timer has started. Good luck!', 
+           type: FeedbackType.success
+         );
+      } else {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'])));
+      }
+    }
   }
 
   Future<void> _loadJobDetails() async {
@@ -50,7 +83,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: PremiumLoader()));
     }
 
     if (_errorMessage != null || _job == null) {
@@ -163,6 +196,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           style: TextStyle(color: Colors.grey[700], fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                       ),
+                      if (isAssignedToMe) // Only show for assigned worker
+                        InkWell(
+                          onTap: _openMap,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.colors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.colors.primary.withValues(alpha: 0.2)),
+                            ),
+                            child: Icon(Icons.directions_rounded, color: AppTheme.colors.primary, size: 20),
+                          ),
+                        ),
                     ],
                   ),
                 ],
@@ -293,9 +340,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           child: IconButton(
                             icon: const Icon(Icons.phone_in_talk_rounded, color: Colors.green, size: 22),
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Calling ${postedBy['name'] ?? 'Customer'}...'))
-                              );
+                               if (postedBy['phone'] != null && postedBy['phone'].toString().isNotEmpty) {
+                                _makePhoneCall(postedBy['phone']);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Phone number not available'))
+                                );
+                              }
                             },
                           ),
                         ),
@@ -309,7 +360,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             const SizedBox(height: 24),
 
             // Contact and Action Buttons for Assigned Worker
-            if (isAssignedToMe && status == 'in_progress') ...[
+            if (isAssignedToMe && (status == 'in_progress' || status == 'assigned')) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -350,9 +401,13 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Calling ${postedBy['name'] ?? 'Customer'}...'))
-                                );
+                                if (postedBy['phone'] != null && postedBy['phone'].toString().isNotEmpty) {
+                                  _makePhoneCall(postedBy['phone']);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Phone number not available'))
+                                  );
+                                }
                               },
                               icon: const Icon(Icons.phone_rounded, size: 20),
                               label: const Text('Call Now'),
@@ -372,115 +427,192 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 )
               ),
               const SizedBox(height: 32),
-              
-              // Finish Job Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
+
+              // SECURE JOB START (OTP)
+              if (status == 'assigned')
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.green, width: 2),
                     boxShadow: [
-                      BoxShadow(color: AppTheme.colors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8)),
+                      BoxShadow(color: Colors.green.withValues(alpha: 0.1), blurRadius: 15, offset: const Offset(0, 8))
                     ],
-                    border: Border.all(color: AppTheme.colors.primary.withValues(alpha: 0.2)),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                         children: [
-                            Container(
-                               padding: const EdgeInsets.all(8),
-                               decoration: BoxDecoration(color: AppTheme.colors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                               child: Icon(Icons.check_circle_outline_rounded, color: AppTheme.colors.primary, size: 24),
-                            ),
-                            const SizedBox(width: 12),
-                            const Text('Complete Job', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
-                         ]
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.lock_clock_rounded, size: 28, color: Colors.green),
+                          SizedBox(width: 10),
+                          Text('SECURE JOB START', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                        ],
                       ),
                       const SizedBox(height: 12),
-                      Text(
-                        'Upload photos of your completed work to get paid.',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      const Text(
+                        'You have arrived! Ask the customer for the 4-digit OTP to start the job timer.', 
+                        textAlign: TextAlign.center, 
+                        style: TextStyle(color: Colors.grey, height: 1.5),
                       ),
-                      const SizedBox(height: 20),
-                      
-                      // Image Picker for Completion
-                      SizedBox(
-                        height: 100,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: [
-                            GestureDetector(
-                              onTap: _pickCompletionPhotos,
-                              child: Container(
-                                width: 100,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
-                                ),
-                                child: Column(
-                                   mainAxisAlignment: MainAxisAlignment.center,
-                                   children: [
-                                      Icon(Icons.add_a_photo_rounded, color: AppTheme.colors.primary, size: 28),
-                                      const SizedBox(height: 4),
-                                      Text('Add Photo', style: TextStyle(fontSize: 10, color: AppTheme.colors.primary, fontWeight: FontWeight.bold)),
-                                   ]
-                                ),
-                              ),
-                            ),
-                            ..._completionPhotos.map((file) => Padding(
-                              padding: const EdgeInsets.only(left: 10),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Image.file(file, width: 100, height: 100, fit: BoxFit.cover),
-                                  ),
-                                  Positioned(
-                                    top: 4,
-                                    right: 4,
-                                    child: GestureDetector(
-                                      onTap: () => setState(() => _completionPhotos.remove(file)),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                                        child: const Icon(Icons.close, color: Colors.red, size: 14),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )),
-                          ],
+                      const SizedBox(height: 24),
+                      TextField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 4,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 32, letterSpacing: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16), 
+                            borderSide: BorderSide(color: Colors.grey[300]!)
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16), 
+                            borderSide: const BorderSide(color: Colors.green, width: 2)
+                          ),
+                          hintText: '0000',
+                          hintStyle: TextStyle(color: Colors.grey[300], letterSpacing: 16),
                         ),
                       ),
-                      
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isSubmitting || _completionPhotos.isEmpty ? null : _submitCompletion,
+                          onPressed: _isSubmitting ? null : _startJob,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.colors.primary,
+                            backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             elevation: 8,
-                            shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
+                            shadowColor: Colors.green.withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                           ),
                           child: _isSubmitting 
-                            ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('SUBMIT PROOF & FINISH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            ? const SizedBox(height: 24, width: 24, child: PremiumLoader(size: 24, color: Colors.white))
+                            : const Text('VERIFY OTP & START JOB', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         ),
                       ),
-                    ],
+                    ]
+                  )
+                ),
+              const SizedBox(height: 32),
+              
+              // Finish Job Section
+              if (status == 'in_progress')
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(color: AppTheme.colors.primary.withValues(alpha: 0.1), blurRadius: 20, offset: const Offset(0, 8)),
+                      ],
+                      border: Border.all(color: AppTheme.colors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                           children: [
+                              Container(
+                                 padding: const EdgeInsets.all(8),
+                                 decoration: BoxDecoration(color: AppTheme.colors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                                 child: Icon(Icons.check_circle_outline_rounded, color: AppTheme.colors.primary, size: 24),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Complete Job', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87)),
+                           ]
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Upload photos of your completed work to get paid.',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        // Image Picker for Completion
+                        SizedBox(
+                          height: 100,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              GestureDetector(
+                                onTap: _pickCompletionPhotos,
+                                child: Container(
+                                  width: 100,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                                  ),
+                                  child: Column(
+                                     mainAxisAlignment: MainAxisAlignment.center,
+                                     children: [
+                                        Icon(Icons.add_a_photo_rounded, color: AppTheme.colors.primary, size: 28),
+                                        const SizedBox(height: 4),
+                                        Text('Add Photo', style: TextStyle(fontSize: 10, color: AppTheme.colors.primary, fontWeight: FontWeight.bold)),
+                                     ]
+                                  ),
+                                ),
+                              ),
+                              ..._completionPhotos.map((file) => Padding(
+                                padding: const EdgeInsets.only(left: 10),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: Image.file(file, width: 100, height: 100, fit: BoxFit.cover),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: GestureDetector(
+                                        onTap: () => setState(() => _completionPhotos.remove(file)),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                                          child: const Icon(Icons.close, color: Colors.red, size: 14),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                            ],
+                          ),
+                        ),
+                        
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isSubmitting || _completionPhotos.isEmpty ? null : _submitCompletion,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.colors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 18),
+                              elevation: 8,
+                              shadowColor: AppTheme.colors.primary.withValues(alpha: 0.4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            child: _isSubmitting 
+                              ? const SizedBox(height: 24, width: 24, child: PremiumLoader(size: 24, color: Colors.white))
+                              : const Text('SUBMIT PROOF & FINISH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 24),
             ],
 
@@ -651,6 +783,72 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           type: FeedbackType.error,
         );
       }
+    }
+  }
+
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    // Remove any non-digit characters except '+' at the start
+    final String cleanNumber = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: cleanNumber,
+    );
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        debugPrint('Could not launch using canLaunchUrl check. Trying direct launch...');
+        await launchUrl(launchUri);
+      }
+    } catch (e) {
+      debugPrint('Error launching dialer: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Could not launch dialer: $cleanNumber')),
+        );
+      }
+    }
+  }
+  Future<void> _openMap() async {
+    final location = _job!['location'];
+    // Support both GeoJSON [long, lat] and simple object {latitude, longitude}
+    double? lat;
+    double? lng;
+    
+    if (location == null) {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location data not available')));
+       return;
+    }
+
+    if (location['coordinates'] != null && location['coordinates'] is List && location['coordinates'].length == 2) {
+       // GeoJSON: [longitude, latitude]
+       lng = (location['coordinates'][0] as num).toDouble();
+       lat = (location['coordinates'][1] as num).toDouble();
+    } else if (location['latitude'] != null && location['longitude'] != null) {
+       lat = (location['latitude'] as num).toDouble();
+       lng = (location['longitude'] as num).toDouble();
+    }
+
+    if (lat != null && lng != null) {
+      final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          // Fallback to generic geo protocol
+           final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng');
+           if (await canLaunchUrl(geoUri)) {
+              await launchUrl(geoUri);
+           } else {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not launch Maps application')));
+           }
+        }
+      } catch (e) {
+         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error launching maps: $e')));
+      }
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid location coordinates')));
     }
   }
 }

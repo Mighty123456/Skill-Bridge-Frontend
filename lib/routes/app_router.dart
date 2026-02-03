@@ -99,7 +99,10 @@ class AppRouter {
           builder: (_) => QuotationComparisonScreen(jobData: jobData),
         );
       case JobExecutionScreen.routeName:
-        return MaterialPageRoute(builder: (_) => const JobExecutionScreen());
+        final jobData = settings.arguments != null 
+            ? Map<String, dynamic>.from(settings.arguments as Map) 
+            : <String, dynamic>{};
+        return MaterialPageRoute(builder: (_) => JobExecutionScreen(jobData: jobData));
       case PaymentScreen.routeName:
         return MaterialPageRoute(builder: (_) => const PaymentScreen());
       case RatingScreen.routeName:

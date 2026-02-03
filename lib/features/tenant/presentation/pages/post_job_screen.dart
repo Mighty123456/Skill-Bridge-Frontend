@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import '../../data/job_service.dart';
 import '../../../../widgets/custom_feedback_popup.dart';
@@ -620,7 +621,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                 child: _isLocationLoading && _currentPosition == null
-                    ? Center(child: CircularProgressIndicator(color: AppTheme.colors.primary))
+                    ? Center(child: PremiumLoader(color: AppTheme.colors.primary))
                     : FlutterMap(
                         mapController: _mapController,
                         options: MapOptions(
@@ -725,7 +726,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
           shadowColor: AppTheme.colors.primary.withValues(alpha: 0.3),
         ),
         child: _isLoading 
-          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          ? const SizedBox(width: 24, height: 24, child: PremiumLoader(size: 24, color: Colors.white))
           : const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

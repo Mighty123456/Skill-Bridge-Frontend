@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../../../../shared/themes/app_theme.dart';
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:skillbridge_mobile/features/auth/data/auth_service.dart';
 import 'package:skillbridge_mobile/features/tenant/presentation/pages/tenant_main_screen.dart';
 import 'package:skillbridge_mobile/features/worker/presentation/pages/worker_main_screen.dart';
@@ -171,9 +172,9 @@ class _SplashScreenState extends State<SplashScreen>
                           SizedBox(
                             width: 24,
                             height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.colors.primary),
+                            child: PremiumLoader(
+                              size: 24,
+                              color: AppTheme.colors.primary,
                             ),
                           ),
                         ],

@@ -61,7 +61,12 @@ class AvailableJobCard extends StatelessWidget {
     final bool isEmergency = urgency.toLowerCase() == 'emergency';
     final title = jobData['job_title'] ?? 'Untitled Job';
     final location = jobData['location']?['address_text'] ?? 'Unknown Location';
-    final distance = 'Nearby'; // Logic can be added if worker location is passed
+    
+    // AI & Distance Logic
+    final distanceKm = jobData['distanceKm'] != null ? '${jobData['distanceKm']} km' : 'Nearby';
+    final matchScore = jobData['matchScore'];
+    final aiLabel = jobData['aiLabel']; // 'Top Match'
+    
     final timerText = _getRemainingTime();
     final timerColor = _getTimerColor();
     final postedTime = _getTimeAgo();
@@ -90,6 +95,27 @@ class AvailableJobCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  // AI Top Match Badge
+                  if (aiLabel != null && aiLabel == 'Top Match') 
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)]), // Violet
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                           BoxShadow(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))
+                        ]
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.auto_awesome, color: Colors.white, size: 12),
+                          SizedBox(width: 4),
+                          Text('98% Match', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -113,25 +139,8 @@ class AvailableJobCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: timerColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.timer_outlined, color: timerColor, size: 12),
-                        const SizedBox(width: 4),
-                        Text(
-                          timerText,
-                          style: TextStyle(color: timerColor, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
+                  
+                  // Quotation Status Badge
                   if (jobData['hasSubmittedQuotation'] == true) 
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -173,7 +182,7 @@ class AvailableJobCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(child: Text(location, style: const TextStyle(color: Colors.grey, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis)),
                         const SizedBox(width: 8),
-                        Text('($distance)', style: TextStyle(color: AppTheme.colors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text('($distanceKm)', style: TextStyle(color: AppTheme.colors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ],
@@ -201,8 +210,16 @@ class AvailableJobCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Budget Range', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                  const Text('Quote Required', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  if (matchScore != null && matchScore > 0)
+                     Text('Match Score: $matchScore%', style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.bold, fontSize: 12)),
+                  
+                  Row(
+                    children: [
+                      Icon(Icons.timer_outlined, color: timerColor, size: 14),
+                      const SizedBox(width: 4),
+                      Text(timerText, style: TextStyle(color: timerColor, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                 ],
               ),
               ElevatedButton(

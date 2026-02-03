@@ -6,6 +6,30 @@ import '../../../../core/config/api_config.dart';
 import '../../../../features/auth/data/auth_service.dart';
 
 class JobExecutionService {
+  static Future<Map<String, dynamic>> startJob(String jobId, String otp) async {
+    final token = await AuthService.getToken();
+    if (token == null) return {'success': false, 'message': 'Not authenticated'};
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/jobs/$jobId/start'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'otp': otp}),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message']};
+      }
+      return {'success': false, 'message': data['message'] ?? 'Failed to start job'};
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   static Future<Map<String, dynamic>> submitCompletion({
     required String jobId,
     required List<File> photos,

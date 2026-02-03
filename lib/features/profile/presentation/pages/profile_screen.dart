@@ -2,8 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:skillbridge_mobile/shared/themes/app_theme.dart';
-import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
 import 'package:skillbridge_mobile/features/auth/data/auth_service.dart';
+import 'package:skillbridge_mobile/widgets/custom_feedback_popup.dart';
+
+import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:skillbridge_mobile/features/auth/presentation/pages/login_screen.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 import 'edit_profile_screen.dart';
@@ -168,8 +170,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFFF6F8FA),
         appBar: const PremiumAppBar(),
         body: Center(
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
+          child: PremiumLoader(
+            size: 40,
             color: AppTheme.colors.primary,
           ),
         ),
@@ -395,7 +397,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: const Center(
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: PremiumLoader(color: Colors.white, size: 24),
                     ),
                   ),
                 ),

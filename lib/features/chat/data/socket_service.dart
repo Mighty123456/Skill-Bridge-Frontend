@@ -28,11 +28,11 @@ class SocketService {
        Note: ApiConfig.baseUrl usually includes /api, e.g., http://localhost:3000/api
        Socket.io needs the base domain, e.g., http://localhost:3000
     */
-    final socketUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    final socketUrl = ApiConfig.socketUrl;
 
     try {
       _socket = io.io(socketUrl, io.OptionBuilder()
-          .setTransports(['websocket'])
+          .setTransports(['websocket', 'polling']) // Added polling for better compatibility
           .disableAutoConnect()
           .setQuery({'token': token})
           .build());
@@ -87,5 +87,13 @@ class SocketService {
   
   void offMessageReceived() {
     _socket?.off('receive_message');
+  }
+
+  void onMessageRead(Function(dynamic) callback) {
+    _socket?.on('messages_read', callback);
+  }
+
+  void offMessageRead() {
+    _socket?.off('messages_read');
   }
 }
