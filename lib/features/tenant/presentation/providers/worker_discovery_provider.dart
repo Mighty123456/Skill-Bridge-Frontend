@@ -1,32 +1,42 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/tenant_worker_service.dart';
+
 // 🎯 STATE: Holds discovery data (Workers nearby)
 class WorkerDiscoveryState {
   final bool isLoading;
   final String? error;
   
   // Step 5: Filtered Results
-  final List<Map<String, dynamic>> workers; // List of worker objects
+  final List<dynamic> workers; // List of worker objects
   final double searchRadius; // in km
   final String? skillFilter;
   final bool verifiedOnly;
+  
+  // Location
+  final double? latitude;
+  final double? longitude;
 
   const WorkerDiscoveryState({
     this.isLoading = false,
     this.error,
     this.workers = const [],
-    this.searchRadius = 5.0,
+    this.searchRadius = 8.0,
     this.skillFilter,
     this.verifiedOnly = true,
+    this.latitude,
+    this.longitude,
   });
 
   WorkerDiscoveryState copyWith({
     bool? isLoading,
     String? error,
-    List<Map<String, dynamic>>? workers,
+    List<dynamic>? workers,
     double? searchRadius,
     String? skillFilter,
     bool? verifiedOnly,
+    double? latitude,
+    double? longitude,
   }) {
     return WorkerDiscoveryState(
       isLoading: isLoading ?? this.isLoading,
@@ -35,6 +45,8 @@ class WorkerDiscoveryState {
       searchRadius: searchRadius ?? this.searchRadius,
       skillFilter: skillFilter ?? this.skillFilter,
       verifiedOnly: verifiedOnly ?? this.verifiedOnly,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 }
@@ -44,6 +56,11 @@ class WorkerDiscoveryNotifier extends Notifier<WorkerDiscoveryState> {
   @override
   WorkerDiscoveryState build() {
     return const WorkerDiscoveryState();
+  }
+
+  // Set location
+  void setLocation(double lat, double lng) {
+    state = state.copyWith(latitude: lat, longitude: lng);
   }
 
   // Set filters
@@ -59,46 +76,30 @@ class WorkerDiscoveryNotifier extends Notifier<WorkerDiscoveryState> {
 
   // Step 5: Geo-query workers
   Future<void> searchWorkers() async {
+    if (state.latitude == null || state.longitude == null) {
+      // Try to get current location if not set?
+       // For now, assume location is set by the UI before calling search
+       return; 
+    }
+    
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      // Simulate API Call (Geo-query)
-      // fetchWorkers(lat, lng, radius, skill, verifiedOnly)
-      await Future.delayed(const Duration(milliseconds: 800)); 
-
-      // Mock Data
-      final mockWorkers = [
-        {
-          'id': 'w1',
-          'name': 'Rajesh Kumar',
-          'skill': 'Plumber',
-          'isVerified': true,
-          'rating': 4.8,
-          'distance': 1.2, // km
-          'availability': 'green', // Prediction feature
-        },
-        {
-          'id': 'w2',
-          'name': 'Anil Singh',
-          'skill': 'Plumber',
-          'isVerified': true,
-          'rating': 4.5,
-          'distance': 3.5,
-          'availability': 'yellow',
-        },
-      ];
-
-      // Local Filter Logic (if not handled by backend completely)
-      final filtered = mockWorkers.where((w) {
-        if (state.skillFilter != null && w['skill'] != state.skillFilter) return false;
-        if (state.verifiedOnly && w['isVerified'] != true) return false;
-        return true;
-      }).toList();
-
-      state = state.copyWith(
-        isLoading: false,
-        workers: filtered,
+      final result = await TenantWorkerService.getNearbyWorkers(
+        lat: state.latitude!, 
+        lng: state.longitude!,
+        radius: state.searchRadius,
+        skill: state.skillFilter
       );
+
+      if (result['success']) {
+        state = state.copyWith(
+          isLoading: false,
+          workers: result['data'],
+        );
+      } else {
+         state = state.copyWith(isLoading: false, error: result['message']);
+      }
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
@@ -109,3 +110,4 @@ class WorkerDiscoveryNotifier extends Notifier<WorkerDiscoveryState> {
 final workerDiscoveryProvider = NotifierProvider<WorkerDiscoveryNotifier, WorkerDiscoveryState>(() {
   return WorkerDiscoveryNotifier();
 });
+

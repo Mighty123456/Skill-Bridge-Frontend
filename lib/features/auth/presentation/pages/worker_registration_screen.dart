@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:intl/intl.dart';
+
 import '../../../../shared/themes/app_theme.dart';
 import '../../data/auth_service.dart';
 import 'otp_verification_screen.dart';
@@ -25,7 +25,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
   final _scrollController = ScrollController();
 
   final _fullNameController = TextEditingController();
-  DateTime? _dateOfBirth;
+
   final _phoneController = TextEditingController();
 
   final _emailController = TextEditingController();
@@ -199,30 +199,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     }
   }
 
-  Future<void> _selectDateOfBirth() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppTheme.colors.primary,
-              onPrimary: AppTheme.colors.onPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _dateOfBirth = picked;
-      });
-    }
-  }
+
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -290,7 +267,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
         role: 'worker', 
         name: _fullNameController.text.trim(),
         phone: _phoneController.text.trim(),
-        dateOfBirth: _dateOfBirth!,
+        // dateOfBirth removed
         address: address,
         skills: skills,
         experience: experience,
@@ -393,11 +370,6 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                         value == null || value.isEmpty ? 'Please enter your full name' : null,
                     ),
                     const SizedBox(height: 16),
-                    _buildDateField(
-                      label: 'Date of Birth',
-                      value: _dateOfBirth,
-                      onTap: _selectDateOfBirth,
-                    ),
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _phoneController,
@@ -473,16 +445,14 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       hint: 'Full residential address',
                       icon: Icons.home_outlined,
                       maxLines: 2,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter address' : null,
+                      validator: null, // Optional
                     ),
                     _buildTextField(
                       controller: _cityController,
                       label: 'City',
                       hint: 'Enter your city',
                       icon: Icons.location_city_outlined,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter city' : null,
+                      validator: null, // Optional
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -490,8 +460,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       label: 'State',
                       hint: 'Enter your state',
                       icon: Icons.map_outlined,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter state' : null,
+                      validator: null, // Optional
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -500,8 +469,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       hint: 'Postal code',
                       icon: Icons.pin_drop_outlined,
                       keyboardType: TextInputType.number,
-                      validator: (value) =>
-                        value == null || value.isEmpty ? 'Enter pincode' : null,
+                      validator: null, // Optional
                     ),
                     const SizedBox(height: 16),
                     _buildLocationButton(),
@@ -531,10 +499,10 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                       ),
                     const SizedBox(height: 16),
                       _buildFileUpload(
-                        label: 'Take a Selfie',
+                        label: 'Take a Selfie (Live)',
                         file: _selfieFile,
                         onCameraTap: () => _pickImage(ImageSource.camera, true),
-                        onGalleryTap: () => _pickImage(ImageSource.gallery, true),
+                        onGalleryTap: null, // gallery disabled for live selfie constraint
                         onRemove: () => setState(() => _selfieFile = null),
                         icon: Icons.camera_front_outlined,
                       ),
@@ -673,38 +641,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     );
   }
 
-  Widget _buildDateField({
-    required String label,
-    required DateTime? value,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(Icons.calendar_today_outlined, color: AppTheme.colors.primary),
-          filled: true,
-          fillColor: AppTheme.colors.jobCardSecondary.withValues(alpha: 0.3),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-        ),
-        child: Text(
-          value != null ? DateFormat('dd/MM/yyyy').format(value) : 'Select date',
-          style: TextStyle(
-            color: value != null ? AppTheme.colors.onSurface : AppTheme.colors.onSurface.withValues(alpha: 0.4),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildDropdown({
     required String label,
@@ -743,7 +680,7 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
     required String label,
     required File? file,
     required VoidCallback onCameraTap,
-    required VoidCallback onGalleryTap,
+    required VoidCallback? onGalleryTap, // Changed to nullable
     VoidCallback? onDocumentTap,
     required VoidCallback onRemove, // Added callback
     required IconData icon,
@@ -824,19 +761,21 @@ class _WorkerRegistrationScreenState extends State<WorkerRegistrationScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onGalleryTap,
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: const Text('Gallery'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: AppTheme.colors.primary.withValues(alpha: 0.5)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              if (onGalleryTap != null) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onGalleryTap,
+                    icon: const Icon(Icons.photo_library_outlined, size: 18),
+                    label: const Text('Gallery'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: AppTheme.colors.primary.withValues(alpha: 0.5)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
-              ),
+              ],
               if (onDocumentTap != null) ...[
                 const SizedBox(width: 12),
                 Expanded(

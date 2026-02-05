@@ -260,14 +260,19 @@ class _QuotationComparisonScreenState extends State<QuotationComparisonScreen> {
         final q = _quotations[index];
         final worker = q['worker_id'] ?? {};
         
+        // Backend now sends these fields
+        final rating = (q['worker_rating'] ?? 0).toDouble();
+        final jobsCompleted = q['worker_jobs_completed'] ?? 0;
+        final isVerified = q['worker_verified'] ?? false;
+
         return QuotationCard(
           workerName: worker['name'] ?? 'Unknown Worker',
-          rating: 4.8, // Should be from worker stats
-          jobsCompleted: 12, // Should be from worker stats
+          rating: rating > 0 ? rating : 5.0, // Default to 5.0 if new (or 0)
+          jobsCompleted: jobsCompleted, 
           price: (q['total_cost'] ?? 0).toDouble(),
           estimatedTime: '${q['estimated_days']} Days',
-          isTopRated: index == 0, // Mark first one as top rated (e.g. cheapest)
-          badges: ['Verified'],
+          isTopRated: index == 0, // Mark first one as top rated (Cheapest + Best Rating)
+          badges: isVerified ? ['Verified'] : [],
           imageUrl: worker['profileImage'] ?? 'https://i.pravatar.cc/150?u=${worker['_id']}',
           notes: q['notes'],
           onSelected: (_jobData != null && _jobData!['status'] == 'open') 

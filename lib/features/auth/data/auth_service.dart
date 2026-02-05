@@ -58,11 +58,12 @@ class AuthService {
     required String role,
     required String name,
     required String phone,
-    required DateTime dateOfBirth,
+    DateTime? dateOfBirth,
     Map<String, dynamic>? address,
     List<String>? services,
     List<String>? skills,
     int? experience,
+    String? companyName,
     File? governmentId,
     File? selfie,
   }) async {
@@ -72,11 +73,12 @@ class AuthService {
       'role': role,
       'name': name,
       'phone': phone,
-      'dateOfBirth': dateOfBirth.toIso8601String().split('T')[0],
+      if (dateOfBirth != null) 'dateOfBirth': dateOfBirth.toIso8601String().split('T')[0],
       if (address != null) 'address': json.encode(address),
       if (services != null && services.isNotEmpty) 'services': json.encode(services),
       if (skills != null && skills.isNotEmpty) 'skills': json.encode(skills),
       if (experience != null) 'experience': experience.toString(),
+      if (companyName != null) 'companyName': companyName,
     };
 
     if (governmentId != null || selfie != null) {
@@ -94,6 +96,7 @@ class AuthService {
       if (services != null && services.isNotEmpty) 'services': services,
       if (skills != null && skills.isNotEmpty) 'skills': skills,
       if (experience != null) 'experience': int.tryParse(experience.toString()),
+      if (companyName != null) 'companyName': companyName,
     });
   }
 

@@ -5,6 +5,7 @@ import '../widgets/skill_category_card.dart';
 import '../widgets/emergency_banner.dart';
 import '../widgets/active_job_summary_card.dart';
 import 'post_job_screen.dart';
+import 'worker_map_screen.dart';
 import 'tenant_notifications_screen.dart';
 import 'package:skillbridge_mobile/widgets/premium_app_bar.dart';
 
@@ -140,6 +141,8 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
               const EmergencyBanner(),
               const SizedBox(height: 24),
               _buildPostJobCTA(context),
+              const SizedBox(height: 16),
+              _buildMapSearchCTA(context),
               const SizedBox(height: 40),
 
               // Section: Active Jobs
@@ -311,6 +314,79 @@ class _TenantHomeScreenState extends State<TenantHomeScreen> {
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
                   color: Colors.white,
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapSearchCTA(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(context, WorkerMapScreen.routeName),
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.colors.secondary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.map_rounded,
+                    color: AppTheme.colors.secondary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Find Workers Nearby',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                      Text(
+                        'View and contact pros on the map',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF6B7280),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[400],
                   size: 14,
                 ),
               ],

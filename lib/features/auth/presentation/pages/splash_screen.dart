@@ -130,23 +130,11 @@ class _SplashScreenState extends State<SplashScreen>
                     opacity: _fadeAnimation,
                     child: ScaleTransition(
                       scale: _scaleAnimation,
-                      child: Container(
-                        decoration: BoxDecoration(
-                           shape: BoxShape.circle,
-                           boxShadow: [
-                             BoxShadow(
-                               color: AppTheme.colors.primary.withValues(alpha: 0.2),
-                               blurRadius: 30,
-                               offset: const Offset(0, 10),
-                             ),
-                           ],
-                        ),
-                        child: Image.asset(
-                          'assets/logoSkillBridge.png',
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.contain,
-                        ),
+                      child: Image.asset(
+                        'assets/logoSkillBridge.png',
+                        width: 240,
+                        height: 240,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),

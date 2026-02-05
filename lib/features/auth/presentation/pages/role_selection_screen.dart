@@ -86,23 +86,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                     Center(
                       child: Column(
                         children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.colors.primary.withValues(alpha: 0.15),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Image.asset(
-                              'assets/logoSkillBridge.png',
-                              width: 180,
-                              height: 180,
-                              fit: BoxFit.contain,
-                            ),
+                          Image.asset(
+                            'assets/logoSkillBridge.png',
+                            width: 220,
+                            height: 220,
+                            fit: BoxFit.contain,
                           ),
                           const SizedBox(height: 24),
                           Text(

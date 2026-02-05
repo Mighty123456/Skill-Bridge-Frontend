@@ -26,6 +26,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
   bool _isLoading = false;
   int _quotationWindowDays = 1;
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _materialController = TextEditingController();
   final TextEditingController _customSkillController = TextEditingController();
   final MapController _mapController = MapController();
 
@@ -150,6 +151,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _materialController.dispose();
     _customSkillController.dispose();
     _mapController.dispose();
     super.dispose();
@@ -194,6 +196,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
       final result = await JobService.createJob(
         title: jobTitle,
         description: _descriptionController.text.trim(),
+        materialRequirements: _materialController.text.trim(),
         skill: finalSkill, 
         urgency: _urgency,
         quotationWindowDays: _quotationWindowDays,
@@ -217,6 +220,7 @@ class _PostJobScreenState extends State<PostJobScreen> {
              // Clear form
              setState(() {
                _descriptionController.clear();
+               _materialController.clear();
                _customSkillController.clear();
                _selectedImages.clear();
                _selectedSkill = null;
@@ -292,6 +296,15 @@ class _PostJobScreenState extends State<PostJobScreen> {
                   const SizedBox(height: 12),
                   _buildUrgencySelector(),
                   
+                  const SizedBox(height: 28),
+                  
+                  const SizedBox(height: 28),
+                  
+                  // Material Requirements
+                  _buildSectionLabel('MATERIAL / PARTS (OPTIONAL)'),
+                  const SizedBox(height: 12),
+                  _buildMaterialField(),
+
                   const SizedBox(height: 28),
                   
                   // Quotation Window
@@ -822,6 +835,42 @@ class _PostJobScreenState extends State<PostJobScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMaterialField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _materialController,
+        maxLines: 2,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF1F2937),
+        ),
+        decoration: InputDecoration(
+          hintText: 'e.g., I have the paint but need brushes...',
+          hintStyle: TextStyle(
+            color: Colors.grey[400],
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(20),
+        ),
+      ),
     );
   }
 }

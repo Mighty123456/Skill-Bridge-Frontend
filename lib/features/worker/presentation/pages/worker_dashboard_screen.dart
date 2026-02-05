@@ -93,9 +93,50 @@ class _WorkerDashboardScreenState extends State<WorkerDashboardScreen> with Sing
         _jobs = result['data'];
         _applyFilter();
       } else {
-        if (!isBackground) _error = result['message'];
+        if (!isBackground) {
+           _error = result['message'];
+           
+           // CONSTRAINT UI: Show dialog if worker is not verified
+           if (result['errorCode'] == 'WORKER_NOT_VERIFIED') {
+             if (mounted) {
+               // Use a microtask to ensure we are out of the build phase if called from initState
+               Future.microtask(() {
+                 _showVerificationPendingDialog();
+               });
+             }
+           }
+        }
       }
     });
+  }
+
+  void _showVerificationPendingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.lock_clock, color: Colors.orange),
+            SizedBox(width: 10),
+            Text('Verification Pending'),
+          ],
+        ),
+        content: const Text(
+          'Your profile is currently under review. You cannot access job feeds until you are verified by an admin.\n\nPlease check back later.',
+          style: TextStyle(fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Optionally redirect to a "Status" page or just stay
+            },
+            child: const Text('Okay, Got it'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _applyFilter() {

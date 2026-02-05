@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:intl/intl.dart';
+
 import 'package:skillbridge_mobile/widgets/premium_loader.dart';
 import '../../../../shared/themes/app_theme.dart';
 import '../../data/auth_service.dart';
@@ -31,7 +31,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 
 
   final _fullNameController = TextEditingController();
-  DateTime? _dateOfBirth;
+
   final _contactNumberController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -41,22 +41,17 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
+  
+  // Contractor specifics
+  final _companyNameController = TextEditingController();
+  final _experienceController = TextEditingController();
+
   double? _latitude;
   double? _longitude;
 
   String? _primaryService;
 
-  final List<String> _userServices = [
-    'Plumbing',
-    'Electrical',
-    'Carpentry',
-    'Painting',
-    'Masonry',
-    'AC Repair',
-    'Appliance Repair',
-    'Driving',
-    'Other',
-  ];
+
 
   final List<String> _contractorServices = [
     'Construction',
@@ -77,6 +72,8 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     _cityController.dispose();
     _stateController.dispose();
     _pincodeController.dispose();
+    _companyNameController.dispose();
+    _experienceController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -160,30 +157,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     }
   }
 
-  Future<void> _selectDateOfBirth() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)),
-      firstDate: DateTime(1950),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: _activeColor,
-              onPrimary: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _dateOfBirth = picked;
-      });
-    }
-  }
+
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -201,27 +175,18 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
       return;
     }
 
-    if (_primaryService == null) {
+    if (widget.isContractor && _primaryService == null) {
       if (!mounted) return;
       CustomFeedbackPopup.show(
         context,
         title: 'Selection Required',
-        message: 'Please select ${widget.isContractor ? "service provided" : "service needed"}',
+        message: 'Please select service provided',
         type: FeedbackType.error,
       );
       return;
     }
 
-    if (_dateOfBirth == null) {
-      if (!mounted) return;
-      CustomFeedbackPopup.show(
-        context,
-        title: 'Dob Required',
-        message: 'Please select your date of birth',
-        type: FeedbackType.error,
-      );
-      return;
-    }
+
 
     setState(() {
       _isLoading = true;
@@ -253,9 +218,15 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         role: role,
         name: _fullNameController.text.trim(),
         phone: _contactNumberController.text.trim(),
-        dateOfBirth: _dateOfBirth!,
+        // dateOfBirth removed
         address: address,
         services: widget.isContractor ? services : null,
+        experience: widget.isContractor && _experienceController.text.isNotEmpty 
+            ? int.tryParse(_experienceController.text.trim()) 
+            : null,
+        companyName: widget.isContractor && _companyNameController.text.isNotEmpty 
+            ? _companyNameController.text.trim() 
+            : null,
       );
 
       if (!mounted) return;
@@ -353,13 +324,6 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                       validator: (value) => 
                         value == null || value.isEmpty ? 'Please enter your full name' : null,
                     ),
-                    const SizedBox(height: 16),
-                    _buildDateField(
-                      label: 'Date of Birth',
-                      value: _dateOfBirth,
-                      onTap: _selectDateOfBirth,
-                    ),
-                    const SizedBox(height: 16),
                     _buildTextField(
                       controller: _contactNumberController,
                       label: 'Contact Number',
@@ -410,16 +374,14 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                       hint: 'Full residential address',
                       icon: Icons.home_outlined,
                       maxLines: 2,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter address' : null,
+                      validator: null, // Optional
                     ),
                     _buildTextField(
                       controller: _cityController,
                       label: 'City',
                       hint: 'Enter your city',
                       icon: Icons.location_city_outlined,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter city' : null,
+                      validator: null, // Optional
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -427,8 +389,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                       label: 'State',
                       hint: 'Enter your state',
                       icon: Icons.map_outlined,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter state' : null,
+                      validator: null, // Optional
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
@@ -437,8 +398,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                       hint: 'Postal code',
                       icon: Icons.pin_drop_outlined,
                       keyboardType: TextInputType.number,
-                      validator: (value) =>
-                         value == null || value.isEmpty ? 'Enter pincode' : null,
+                      validator: null, // Optional
                     ),
                     const SizedBox(height: 16),
                     _buildLocationButton(),
@@ -446,18 +406,53 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
                 ),
                 const SizedBox(height: 24),
 
+                if (widget.isContractor)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24.0),
+                    child: _buildSectionCard(
+                      title: 'Business Details',
+                      icon: Icons.business,
+                      children: [
+                        _buildTextField(
+                          controller: _companyNameController,
+                          label: 'Company / Business Name',
+                          hint: 'e.g. Acme Constructions',
+                          icon: Icons.business_center_outlined,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _experienceController,
+                          label: 'Years of Experience',
+                          hint: 'e.g. 5',
+                          icon: Icons.history_edu_outlined,
+                          keyboardType: TextInputType.number,
+                          validator: (value) =>
+                             value == null || value.isEmpty ? 'Enter experience' : null,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (widget.isContractor)
                 _buildSectionCard(
-                  title: 'Service Information',
+                  title: 'Service Profile',
                   icon: Icons.work_outline,
                   children: [
                     _buildDropdown(
-                      label: widget.isContractor
-                          ? 'Primary Service Provided'
-                          : 'Primary Service Needed',
+                      label: 'Primary Trade / Service',
                       value: _primaryService,
-                      items: widget.isContractor ? _contractorServices : _userServices,
+                      items: _contractorServices,
                       onChanged: (val) => setState(() => _primaryService = val),
                     ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'This will be your primary category. You can add more specializations later in your profile.',
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: AppTheme.colors.onSurface.withValues(alpha: 0.6),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                   ],
                 ),
 
@@ -592,38 +587,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     );
   }
 
-  Widget _buildDateField({
-    required String label,
-    required DateTime? value,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(Icons.calendar_today_outlined, color: _activeColor),
-          filled: true,
-          fillColor: AppTheme.colors.jobCardSecondary.withValues(alpha: 0.3),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-        ),
-        child: Text(
-          value != null ? DateFormat('dd/MM/yyyy').format(value) : 'Select date',
-          style: TextStyle(
-            color: value != null ? AppTheme.colors.onSurface : AppTheme.colors.onSurface.withValues(alpha: 0.4),
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildDropdown({
     required String label,

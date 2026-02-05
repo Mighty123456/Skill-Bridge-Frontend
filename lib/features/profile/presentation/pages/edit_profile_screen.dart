@@ -100,16 +100,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             onConfirm: () => Navigator.of(context).pop(true),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? 'Update failed')),
+          CustomFeedbackPopup.show(
+            context,
+            title: 'Update Failed',
+            message: result['message'] ?? 'Update failed',
+            type: FeedbackType.error,
           );
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+        CustomFeedbackPopup.show(
+            context,
+            title: 'Error',
+            message: 'An unexpected error occurred: $e',
+            type: FeedbackType.error,
         );
       }
     }

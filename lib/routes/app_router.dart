@@ -15,6 +15,7 @@ import '../features/tenant/presentation/pages/job_execution_screen.dart';
 import '../features/tenant/presentation/pages/payment_screen.dart';
 import '../features/tenant/presentation/pages/rating_screen.dart';
 import '../features/tenant/presentation/pages/tenant_notifications_screen.dart';
+import '../features/tenant/presentation/pages/worker_map_screen.dart';
 import '../features/worker/presentation/pages/worker_main_screen.dart';
 import '../features/worker/presentation/pages/job_bid_screen.dart';
 import '../features/worker/presentation/pages/worker_wallet_screen.dart';
@@ -138,6 +139,8 @@ class AppRouter {
         );
       case ChatListScreen.routeName:
         return MaterialPageRoute(builder: (_) => const ChatListScreen());
+      case WorkerMapScreen.routeName:
+        return MaterialPageRoute(builder: (_) => const WorkerMapScreen());
 
       default:
         return null;

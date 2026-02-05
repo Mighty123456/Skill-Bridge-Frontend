@@ -9,6 +9,7 @@ class JobService {
   static Future<Map<String, dynamic>> createJob({
     required String title,
     required String description,
+    String? materialRequirements, 
     required String skill,
     required Map<String, dynamic> location,
     required String urgency,
@@ -30,6 +31,9 @@ class JobService {
       // Add Fields
       request.fields['job_title'] = title;
       request.fields['job_description'] = description;
+      if (materialRequirements != null && materialRequirements.isNotEmpty) {
+        request.fields['material_requirements'] = materialRequirements;
+      }
       request.fields['skill_required'] = skill;
       request.fields['urgency_level'] = urgency;
       request.fields['quotation_window_hours'] = (quotationWindowDays * 24).toString();

@@ -21,7 +21,11 @@ class WorkerDashboardService {
       if (response.statusCode == 200) {
         return {'success': true, 'data': data['data']};
       }
-      return {'success': false, 'message': data['message'] ?? 'Failed to load jobs'};
+      return {
+        'success': false, 
+        'message': data['message'] ?? 'Failed to load jobs',
+        'errorCode': data['errorCode'] // Pass errorCode for UI handling
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -45,7 +49,11 @@ class WorkerDashboardService {
       if (response.statusCode == 200) {
         return {'success': true, 'data': data['data']};
       }
-      return {'success': false, 'message': data['message'] ?? 'Failed to load jobs'};
+      return {
+        'success': false, 
+        'message': data['message'] ?? 'Failed to load jobs',
+        'errorCode': data['errorCode']
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
